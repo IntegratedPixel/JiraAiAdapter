@@ -390,11 +390,12 @@ npm run jira batch release-1.0.json
 6. **Direct REST via `got` vs `jira-client`**: Direct REST preferred for full v3 + Agile + ADF control; `jira-client` can be used selectively if needed
 
 ## Decision Log
-- **2024-08-17**: Chose `jira-client` over `node-jira` for better documentation
 - **2024-08-17**: Decided on commander over yargs for cleaner API
 - **2024-08-17**: Opted for JSON config over YAML for consistency with package.json
-- **2025-08-17**: Adopted TypeScript and direct REST (`got`) for Jira Cloud v3 + Agile, with ADF support and keychain storage
-- **2025-08-17**: Standardized `--json` output contract and exit codes for AI assistants
+- **2025-08-17**: Adopted TypeScript and direct REST API calls using `got` for full control over Jira Cloud v3 + Agile APIs, with ADF support
+- **2025-08-17**: Implemented secure credential storage using keytar for system keychain integration
+- **2025-08-17**: Standardized `--json` output contract and exit codes for AI assistant compatibility
+- **2025-08-17**: Package named `@integratedpixel/jira-ai-cli` to align with AI-focused purpose
 
 ---
 
