@@ -1,0 +1,54 @@
+{
+  "issueType": "Task",
+  "priority": "Medium",
+  "template": {
+    "summary": "{{summary}}",
+    "description": "## Description\n{{description}}\n\n## Tasks\n- [ ] {{task1}}\n- [ ] {{task2}}\n- [ ] {{task3}}\n\n## Definition of Done\n{{dod}}\n\n## Notes\n{{notes}}",
+    "labels": [],
+    "components": []
+  },
+  "prompts": [
+    {
+      "name": "summary",
+      "message": "Task summary:",
+      "type": "input",
+      "required": true
+    },
+    {
+      "name": "description",
+      "message": "Task description:",
+      "type": "input",
+      "required": true
+    },
+    {
+      "name": "task1",
+      "message": "Subtask 1:",
+      "type": "input",
+      "default": ""
+    },
+    {
+      "name": "task2",
+      "message": "Subtask 2:",
+      "type": "input",
+      "default": ""
+    },
+    {
+      "name": "task3",
+      "message": "Subtask 3:",
+      "type": "input",
+      "default": ""
+    },
+    {
+      "name": "dod",
+      "message": "Definition of done:",
+      "type": "input",
+      "default": "Task completed and tested"
+    },
+    {
+      "name": "notes",
+      "message": "Additional notes:",
+      "type": "input",
+      "default": ""
+    }
+  ]
+}

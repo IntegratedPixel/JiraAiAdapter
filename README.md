@@ -4,7 +4,9 @@ AI-friendly command-line interface for Jira, designed to enable AI assistants (C
 
 ## Features
 
-### Phase 1 (Current Release)
+### Current Release (v0.2.0)
+
+#### Foundation
 - ✅ Secure credential management with keychain support
 - ✅ Configuration via environment variables, `.jirarc.json`, or package.json
 - ✅ Connection testing and validation
@@ -12,8 +14,15 @@ AI-friendly command-line interface for Jira, designed to enable AI assistants (C
 - ✅ JSON output mode for AI consumption
 - ✅ Structured error handling with exit codes
 
+#### Core Commands
+- ✅ **List issues** with powerful filtering (status, assignee, type, priority, labels, sprint)
+- ✅ **View issue details** with comments and history support
+- ✅ **Create issues** with interactive mode and templates (bug, feature, task)
+- ✅ **JQL support** for advanced queries
+- ✅ **ADF support** for rich text formatting
+- ✅ **Table output** for better readability
+
 ### Coming Soon
-- Phase 2: Core commands (list, view, create)
 - Phase 3: Advanced commands (update, comment, sprint)
 - Phase 4: AI assistant features (batch operations, context generation)
 - Phase 5: Polish and performance optimizations
@@ -74,6 +83,63 @@ jira auth test
 
 # Clear stored credentials
 jira auth clear
+```
+
+### List Issues
+
+```bash
+# List all issues in project
+jira list
+
+# Filter by status
+jira list --status "In Progress"
+
+# Show only my issues
+jira list --mine
+
+# Filter by multiple criteria
+jira list --type Bug --priority High --limit 10
+
+# Use custom JQL
+jira list --jql "project = PROJ AND sprint in openSprints()"
+
+# Output as JSON for AI processing
+jira list --mine --json
+```
+
+### View Issue
+
+```bash
+# View issue details
+jira view PROJ-123
+
+# Include comments
+jira view PROJ-123 --comments
+
+# Open in browser
+jira view PROJ-123 --open
+
+# Get JSON output
+jira view PROJ-123 --comments --json
+```
+
+### Create Issue
+
+```bash
+# Interactive creation
+jira create
+
+# Use a template
+jira create --template bug
+
+# Quick creation with parameters
+jira create --type Task --summary "Update documentation" --description "Need to update API docs"
+
+# Dry run to preview
+jira create --template feature --dry-run
+
+# Create from file
+jira create --description-file ./issue-description.md
 ```
 
 ### Global Options

@@ -1,0 +1,78 @@
+{
+  "issueType": "Story",
+  "priority": "Major",
+  "template": {
+    "summary": "{{summary}}",
+    "description": "## Overview\n{{overview}}\n\n## User Story\nAs a {{user}}\nI want to {{want}}\nSo that {{benefit}}\n\n## Acceptance Criteria\n- [ ] {{criteria1}}\n- [ ] {{criteria2}}\n- [ ] {{criteria3}}\n\n## Technical Details\n{{technical}}\n\n## Dependencies\n{{dependencies}}\n\n## Notes\n{{notes}}",
+    "labels": ["feature"],
+    "components": []
+  },
+  "prompts": [
+    {
+      "name": "summary",
+      "message": "Feature summary:",
+      "type": "input",
+      "required": true
+    },
+    {
+      "name": "overview",
+      "message": "Feature overview:",
+      "type": "input",
+      "required": true
+    },
+    {
+      "name": "user",
+      "message": "As a (user type):",
+      "type": "input",
+      "default": "user"
+    },
+    {
+      "name": "want",
+      "message": "I want to:",
+      "type": "input",
+      "required": true
+    },
+    {
+      "name": "benefit",
+      "message": "So that:",
+      "type": "input",
+      "required": true
+    },
+    {
+      "name": "criteria1",
+      "message": "Acceptance criteria 1:",
+      "type": "input",
+      "required": true
+    },
+    {
+      "name": "criteria2",
+      "message": "Acceptance criteria 2:",
+      "type": "input",
+      "default": ""
+    },
+    {
+      "name": "criteria3",
+      "message": "Acceptance criteria 3:",
+      "type": "input",
+      "default": ""
+    },
+    {
+      "name": "technical",
+      "message": "Technical details:",
+      "type": "input",
+      "default": ""
+    },
+    {
+      "name": "dependencies",
+      "message": "Dependencies:",
+      "type": "input",
+      "default": "None"
+    },
+    {
+      "name": "notes",
+      "message": "Additional notes:",
+      "type": "input",
+      "default": ""
+    }
+  ]
+}
