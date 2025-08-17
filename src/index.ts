@@ -53,7 +53,7 @@ program
 program
   .command('status')
   .description('Show configuration status')
-  .action(() => {
+  .action(async () => {
     try {
       const configManager = new ConfigManager();
       const config = configManager.getPartialConfig();
@@ -65,7 +65,7 @@ program
       Logger.info(`  Project: ${config.project || 'Not configured'}`);
       Logger.info(`  Board: ${config.board || 'Not configured'}`);
       
-      if (configManager.isConfigured()) {
+      if (await configManager.isConfigured()) {
         Logger.success('\nConfiguration is complete!');
       } else {
         const errors = configManager.validate();

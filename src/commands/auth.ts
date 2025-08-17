@@ -82,7 +82,7 @@ export function createAuthCommand(): Command {
     .action(async () => {
       try {
         const configManager = new ConfigManager();
-        const config = configManager.getConfig();
+        const config = await configManager.getConfig();
 
         Logger.startSpinner('Testing connection...');
         const client = new CoreClient(config);
@@ -93,7 +93,7 @@ export function createAuthCommand(): Command {
         const project = await client.getProject(config.project);
         Logger.success(`Project: ${project.name} (${project.key})`);
 
-        if (Logger['jsonMode']) {
+        if (Logger.isJsonMode()) {
           ErrorHandler.success({
             user: {
               displayName: user.displayName,

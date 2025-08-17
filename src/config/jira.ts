@@ -27,12 +27,13 @@ export class ConfigManager {
   });
 
   private config: Partial<JiraConfig> = {};
+  private configLoaded = false;
 
   constructor() {
-    this.loadConfig();
+    this.loadConfigSync();
   }
 
-  private async loadConfig(): Promise<void> {
+  private loadConfigSync(): void {
     const searchResult = ConfigManager.explorer.search();
     
     if (searchResult) {
@@ -45,24 +46,27 @@ export class ConfigManager {
       project: process.env.JIRA_PROJECT || this.config.project || '',
       defaultIssueType: process.env.JIRA_DEFAULT_ISSUE_TYPE || this.config.defaultIssueType || 'Task',
       board: process.env.JIRA_BOARD || this.config.board,
-      apiToken: '', // Will be loaded separately
+      apiToken: process.env.JIRA_TOKEN || '', // Will be loaded from keychain if available
     };
 
-    // Try to load token from keychain first
-    if (this.config.email) {
+    this.configLoaded = true;
+  }
+
+  async loadTokenFromKeychain(): Promise<void> {
+    if (!this.configLoaded) {
+      throw new Error('Config not loaded');
+    }
+
+    // Try to load token from keychain if not already set
+    if (this.config.email && !this.config.apiToken) {
       try {
         const token = await keytar.getPassword(ConfigManager.SERVICE_NAME, this.config.email);
         if (token) {
           this.config.apiToken = token;
         }
       } catch (error) {
-        // Keychain not available, fall back to env
+        // Keychain not available, token remains from env or empty
       }
-    }
-
-    // Fall back to environment variable if no keychain token
-    if (!this.config.apiToken) {
-      this.config.apiToken = process.env.JIRA_TOKEN || '';
     }
   }
 
@@ -104,7 +108,9 @@ export class ConfigManager {
     return errors;
   }
 
-  getConfig(): JiraConfig {
+  async getConfig(): Promise<JiraConfig> {
+    await this.loadTokenFromKeychain();
+    
     const errors = this.validate();
     if (errors.length > 0) {
       throw new Error(`Configuration errors:\n${errors.join('\n')}`);
@@ -117,7 +123,8 @@ export class ConfigManager {
     return this.config;
   }
 
-  isConfigured(): boolean {
+  async isConfigured(): Promise<boolean> {
+    await this.loadTokenFromKeychain();
     return this.validate().length === 0;
   }
 }

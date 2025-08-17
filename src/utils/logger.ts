@@ -24,6 +24,10 @@ export class Logger {
     }
   }
 
+  static isJsonMode(): boolean {
+    return this.jsonMode;
+  }
+
   static debug(message: string, data?: any): void {
     if (this.debugMode && !this.jsonMode) {
       console.error(chalk.gray(`[DEBUG] ${message}`));
