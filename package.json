@@ -1,0 +1,64 @@
+{
+  "name": "@yourorg/jira-cli",
+  "version": "0.1.0",
+  "description": "AI-friendly Jira CLI tool for command-line interaction with Jira",
+  "main": "dist/index.js",
+  "bin": {
+    "jira": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "jira": "tsx src/index.ts",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IntegratedPixel/JiraAiAdapter.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/IntegratedPixel/JiraAiAdapter/issues"
+  },
+  "homepage": "https://github.com/IntegratedPixel/JiraAiAdapter#readme",
+  "keywords": [
+    "jira",
+    "cli",
+    "ai",
+    "assistant",
+    "command-line",
+    "atlassian"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "got": "^14.4.5",
+    "dotenv": "^16.4.7",
+    "cosmiconfig": "^9.0.0",
+    "keytar": "^7.9.0",
+    "chalk": "^5.3.0",
+    "cli-table3": "^0.6.5",
+    "inquirer": "^12.3.0",
+    "ora": "^8.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/inquirer": "^9.0.9",
+    "@typescript-eslint/eslint-plugin": "^8.19.0",
+    "@typescript-eslint/parser": "^8.19.0",
+    "eslint": "^9.18.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "tsx": "^4.19.2",
+    "vitest": "^2.1.8",
+    "@vitest/coverage-v8": "^2.1.8",
+    "nock": "^13.5.6"
+  }
+}

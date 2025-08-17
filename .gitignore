@@ -1,0 +1,25 @@
+.DS_Store
+node_modules/
+
+# Build output
+dist/
+
+# Environment files
+.env
+.env.local
+.jirarc.json
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Package lock files (add back if you prefer to commit them)
+package-lock.json
