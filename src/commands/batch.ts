@@ -297,6 +297,7 @@ async function createIssues(
         priority: issue.priority,
         labels: issue.labels,
         assignee: issue.assignee,
+        parent: issue.parent,
       });
 
       Logger.stopSpinner(true, `Created ${created.key}`);

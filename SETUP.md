@@ -308,6 +308,9 @@ npm run jira list -- --sprint current
 # Create a bug ticket
 npm run jira create -- --type Bug --title "FPS drops to 4" --description "After implementing..."
 
+# Create a sub-task under a parent issue
+npm run jira create -- --type Sub-task --summary "Implement validation logic" --parent CV-13
+
 # Update ticket status
 npm run jira update -- PROJ-123 --status "In Progress" --comment "Starting implementation"
 

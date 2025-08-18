@@ -40,6 +40,7 @@ export function createCreateCommand(): Command {
     .option('-l, --labels <labels>', 'Comma-separated labels')
     .option('-c, --components <components>', 'Comma-separated components')
     .option('-a, --assignee <assignee>', 'Assignee email or username')
+    .option('--parent <issueKey>', 'Parent issue key (required for Sub-task type)')
     .option('--template <template>', 'Use template (bug, feature, task)')
     .option('--dry-run', 'Preview the issue without creating it')
     .action(async (options) => {
@@ -119,6 +120,15 @@ export function createCreateCommand(): Command {
           issueData.assignee = options.assignee;
         }
 
+        if (options.parent) {
+          issueData.parent = options.parent;
+          // If parent is provided but type is not Sub-task, warn the user
+          if (issueData.issueType && !issueData.issueType.toLowerCase().includes('sub')) {
+            Logger.warning('Parent specified but issue type is not Sub-task. Setting type to Sub-task.');
+            issueData.issueType = 'Sub-task';
+          }
+        }
+
         // Interactive mode if missing required fields
         if (!issueData.summary || !issueData.issueType) {
           const answers = await inquirer.prompt([
@@ -181,6 +191,7 @@ export function createCreateCommand(): Command {
           labels: issueData.labels,
           components: issueData.components,
           assignee: issueData.assignee,
+          parent: issueData.parent,
         });
 
         Logger.stopSpinner(true, `Issue ${createdIssue.key} created successfully!`);

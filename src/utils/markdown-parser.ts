@@ -8,6 +8,7 @@ export interface ParsedIssue {
   priority?: string;
   components?: string[];
   assignee?: string;
+  parent?: string;
   originalText?: string;
 }
 

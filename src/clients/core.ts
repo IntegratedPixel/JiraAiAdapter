@@ -36,6 +36,7 @@ export interface CreateIssueOptions {
   labels?: string[];
   components?: string[];
   assignee?: string;
+  parent?: string;
   customFields?: Record<string, any>;
 }
 
@@ -146,6 +147,11 @@ export class CoreClient extends BaseClient {
 
     if (options.components && options.components.length > 0) {
       createData.fields.components = options.components.map(name => ({ name }));
+    }
+
+    // Add parent field for sub-tasks
+    if (options.parent) {
+      createData.fields.parent = { key: options.parent };
     }
 
     if (options.assignee) {
