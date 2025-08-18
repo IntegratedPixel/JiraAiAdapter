@@ -24,6 +24,17 @@ export function createUpdateCommand(): Command {
         const config = await configManager.getConfig();
         const client = new CoreClient(config);
 
+        // First, verify the issue exists
+        let currentIssue;
+        try {
+          currentIssue = await client.getIssue(issueKey);
+        } catch (error: any) {
+          if (error.response?.statusCode === 404) {
+            throw new Error(`Issue ${issueKey} not found. Please check the issue key.`);
+          }
+          throw error;
+        }
+
         // Build update data
         const updateData: any = {};
         let hasUpdates = false;
@@ -67,6 +78,29 @@ export function createUpdateCommand(): Command {
 
         // Handle parent conversion (requires special handling)
         if (options.parent) {
+          // Validate parent exists
+          try {
+            const parentIssue = await client.getIssue(options.parent);
+            
+            // Check if parent is already a sub-task
+            if (parentIssue.fields.issuetype?.subtask) {
+              throw new Error(`Cannot set ${options.parent} as parent - it is already a sub-task. Sub-tasks cannot have sub-tasks.`);
+            }
+            
+            // Check if trying to set self as parent
+            if (parentIssue.key === issueKey) {
+              throw new Error('An issue cannot be its own parent');
+            }
+          } catch (error: any) {
+            if (error.response?.statusCode === 404) {
+              throw new Error(`Parent issue ${options.parent} not found. Please check the issue key.`);
+            }
+            if (error.message) {
+              throw error;
+            }
+            throw new Error(`Failed to validate parent issue: ${error}`);
+          }
+          
           needsConversion = true;
           
           // Force type to Sub-task if parent is specified
@@ -128,12 +162,9 @@ export function createUpdateCommand(): Command {
 
         // Handle parent conversion if needed
         if (needsConversion && options.parent) {
-          // First get the issue to check its current type
-          const issue = await client.getIssue(issueKey);
-          
           // Check if already a sub-task
-          if (issue.fields.issuetype?.subtask) {
-            if (issue.fields.parent?.key === options.parent) {
+          if (currentIssue.fields.issuetype?.subtask) {
+            if (currentIssue.fields.parent?.key === options.parent) {
               Logger.warning(`Issue is already a sub-task of ${options.parent}`);
             } else {
               // Need to change parent - this is complex and may not be supported

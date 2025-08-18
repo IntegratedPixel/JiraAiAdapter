@@ -360,7 +360,9 @@ export class CoreClient extends BaseClient {
    * This uses the move endpoint which handles both type change and parent assignment
    */
   async convertToSubtask(issueKey: string, parentKey: string): Promise<void> {
-    // First, get the Sub-task issue type ID for this project
+    Logger.debug(`Converting ${issueKey} to sub-task of ${parentKey}`);
+    
+    // First, get the issue to get project info
     const issue = await this.getIssue(issueKey);
     const projectKey = issue.fields.project.key;
     
@@ -403,8 +405,38 @@ export class CoreClient extends BaseClient {
     } catch (error: any) {
       // If standard update fails, try the move endpoint
       if (error.response?.statusCode === 400) {
+        const errorBody = error.response.body;
+        
+        // Check for specific error messages
+        if (errorBody?.errors?.issuetype) {
+          throw new Error(`Cannot convert to Sub-task: ${errorBody.errors.issuetype}`);
+        }
+        if (errorBody?.errors?.parent) {
+          throw new Error(`Cannot set parent: ${errorBody.errors.parent}`);
+        }
+        
         Logger.debug('Standard update failed, trying move endpoint');
         
+        // Try a simpler approach - just set parent if type is already Sub-task
+        if (issue.fields.issuetype?.name?.toLowerCase().includes('sub')) {
+          const simpleUpdate = {
+            fields: {
+              parent: { key: parentKey }
+            }
+          };
+          
+          try {
+            await this.request<void>(`rest/api/3/issue/${issueKey}`, {
+              method: 'PUT',
+              json: simpleUpdate,
+            });
+            return;
+          } catch (simpleError: any) {
+            Logger.debug('Simple parent update also failed');
+          }
+        }
+        
+        // Last resort: try move endpoint
         const moveData = {
           fields: {
             project: { key: projectKey },
@@ -413,10 +445,19 @@ export class CoreClient extends BaseClient {
           }
         };
 
-        await this.request<void>(`rest/api/3/issue/${issueKey}/move`, {
-          method: 'POST',
-          json: moveData,
-        });
+        try {
+          await this.request<void>(`rest/api/3/issue/${issueKey}/move`, {
+            method: 'POST',
+            json: moveData,
+          });
+        } catch (moveError: any) {
+          if (moveError.response?.statusCode === 404) {
+            throw new Error('Move endpoint not available. Issue type conversion may not be supported in this Jira instance.');
+          }
+          throw moveError;
+        }
+      } else if (error.response?.statusCode === 404) {
+        throw new Error(`Issue ${issueKey} not found`);
       } else {
         throw error;
       }
