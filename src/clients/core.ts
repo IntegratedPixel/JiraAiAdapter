@@ -1,5 +1,6 @@
 import { BaseClient } from './base.js';
 import { JiraConfig } from '../config/jira.js';
+import { Logger } from '../utils/logger.js';
 import {
   JiraIssue,
   JiraSearchResult,
@@ -160,10 +161,33 @@ export class CoreClient extends BaseClient {
       Object.assign(createData.fields, options.customFields);
     }
 
-    return this.request<JiraIssue>('rest/api/3/issue', {
-      method: 'POST',
-      json: createData,
-    });
+    try {
+      return await this.request<JiraIssue>('rest/api/3/issue', {
+        method: 'POST',
+        json: createData,
+      });
+    } catch (error: any) {
+      // Handle field not available errors
+      if (error.response?.statusCode === 400 && error.response?.body) {
+        const body = error.response.body;
+        
+        // Check if priority field is the issue
+        if (body.errors?.priority && options.priority) {
+          Logger.warning('Priority field not available in project, retrying without it');
+          
+          // Remove priority and retry
+          delete createData.fields.priority;
+          
+          return await this.request<JiraIssue>('rest/api/3/issue', {
+            method: 'POST',
+            json: createData,
+          });
+        }
+      }
+      
+      // Re-throw for other errors
+      throw error;
+    }
   }
 
   /**
