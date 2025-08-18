@@ -36,12 +36,16 @@ program
   .version(VERSION)
   .option('-d, --debug', 'Enable debug mode')
   .option('-q, --quiet', 'Suppress non-error output')
+  .option('-y, --yes', 'Automatically answer yes to all prompts')
   .option('--json', 'Output in JSON format')
   .hook('preAction', (thisCommand) => {
     const opts = thisCommand.opts();
     Logger.setDebugMode(opts.debug || false);
     Logger.setQuietMode(opts.quiet || false);
     Logger.setJsonMode(opts.json || false);
+    
+    // Store yes mode globally for commands to access
+    process.env.JIRA_CLI_YES_MODE = opts.yes ? 'true' : 'false';
   });
 
 // Add commands

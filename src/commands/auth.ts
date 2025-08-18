@@ -138,16 +138,24 @@ export function createAuthCommand(): Command {
           return;
         }
 
-        const confirm = await inquirer.prompt([
-          {
-            type: 'confirm',
-            name: 'confirm',
-            message: `Clear credentials for ${config.email}?`,
-            default: false,
-          },
-        ]);
+        const skipConfirmation = process.env.JIRA_CLI_YES_MODE === 'true';
+        let shouldClear = skipConfirmation;
+        
+        if (!skipConfirmation) {
+          const confirm = await inquirer.prompt([
+            {
+              type: 'confirm',
+              name: 'confirm',
+              message: `Clear credentials for ${config.email}?`,
+              default: false,
+            },
+          ]);
+          shouldClear = confirm.confirm;
+        } else {
+          Logger.debug('Auto-confirming credential clear due to --yes flag');
+        }
 
-        if (confirm.confirm) {
+        if (shouldClear) {
           await configManager.deleteToken(config.email);
           Logger.success('Credentials cleared from keychain');
           Logger.info('Note: You may need to manually remove ~/.jirarc.json');

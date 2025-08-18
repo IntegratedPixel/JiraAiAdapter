@@ -267,7 +267,8 @@ Build a lightweight Node.js CLI tool that:
    - quick:todo - Create task and assign
 
 ### Global CLI Contract for AI
-- Global flags: `--json`, `--quiet`, `--debug`, `--fields key,summary,status`, `--limit`, `--page`, `--jql`.
+- Global flags: `--json`, `--quiet`, `--debug`, `--yes` (or `-y`), `--fields key,summary,status`, `--limit`, `--page`, `--jql`.
+- The `--yes` or `-y` flag automatically answers "yes" to all confirmation prompts, essential for automation and AI tools like Cursor.
 - JSON output schema (single object per invocation):
   ```json
   { "ok": true, "data": { }, "error": null }
@@ -302,6 +303,9 @@ Build a lightweight Node.js CLI tool that:
 
 ### For AI Assistants
 ```bash
+# Use --yes flag to skip all confirmations (essential for Cursor/AI tools)
+npm run jira -- --yes delete CV-10
+
 # List available issue types for the project
 npm run jira types
 
@@ -313,6 +317,9 @@ npm run jira create -- --type Bug --title "FPS drops to 4" --description "After 
 
 # Create a sub-task under a parent issue (check types command for exact name)
 npm run jira create -- --type Sub-task --summary "Implement validation logic" --parent CV-13
+
+# Delete with auto-confirmation for automation
+npm run jira -- -y delete PROJ-123
 
 # Convert existing issue to sub-task
 npm run jira update CV-10 --parent CV-13

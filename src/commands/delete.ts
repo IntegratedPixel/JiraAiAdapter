@@ -26,8 +26,10 @@ export function createDeleteCommand(): Command {
           process.exit(4);
         }
 
-        // Confirm deletion unless --force is used
-        if (!options.force) {
+        // Confirm deletion unless --force or --yes is used
+        const skipConfirmation = options.force || process.env.JIRA_CLI_YES_MODE === 'true';
+        
+        if (!skipConfirmation) {
           Logger.info(`\nAbout to delete:`);
           Logger.info(`  Key: ${issue.key}`);
           Logger.info(`  Summary: ${issue.fields.summary}`);
@@ -47,6 +49,8 @@ export function createDeleteCommand(): Command {
             Logger.info('Deletion cancelled');
             return;
           }
+        } else if (process.env.JIRA_CLI_YES_MODE === 'true' && !options.force) {
+          Logger.debug('Auto-confirming deletion due to --yes flag');
         }
 
         // Delete the issue
