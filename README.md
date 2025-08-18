@@ -27,6 +27,8 @@ AI-friendly command-line interface for Jira, designed to enable AI assistants (C
 - Phase 4: AI assistant features (batch operations, context generation)
 - Phase 5: Polish and performance optimizations
 
+
+
 ## Installation
 
 ```bash
@@ -40,35 +42,89 @@ npm run build
 npm link
 ```
 
-## Configuration
+## Quick Start
 
-### Quick Setup
-
-1. Copy the example environment file:
-```bash
-cp .env.example .env
-```
-
-2. Run the interactive setup:
+### 1. Set up global authentication (one time)
 ```bash
 jira auth set
+# Enter your Atlassian host, email, and API token
 ```
 
-### Configuration Methods
+### 2. Initialize project configuration (per project)
+```bash
+cd /path/to/your/project
+jira init
+# Select your project key and configure defaults
+```
 
-The CLI supports multiple configuration methods (in priority order):
+### 3. Start using the CLI
+```bash
+jira list --mine        # List your issues
+jira create            # Create a new issue
+jira view PROJ-123     # View issue details
+```
 
-1. **Environment Variables** (`.env` file)
-2. **Local Config** (`.jirarc.json` in current directory)
-3. **Global Config** (`~/.jirarc.json` in home directory)
-4. **Package.json** (`jira` section)
+## Multi-Project Configuration
+
+The CLI separates global authentication from project-specific settings, enabling seamless work across multiple projects.
+
+### Global Configuration (`~/.jirarc.json`)
+Stores authentication credentials (set once, use everywhere):
+- **Host**: Your Atlassian instance
+- **Email**: Your email address  
+- **API Token**: Stored securely in system keychain
+
+### Project Configuration (`.jirarc.json`)
+Stores project-specific settings (per repository):
+- **Project Key**: The Jira project (e.g., `CB`, `EE`)
+- **Board**: Default Agile board
+- **Default Issue Type**: Task, Bug, Story, etc.
+- **Default Assignee**: Email or "me"
+- **Default Labels**: Auto-applied to new issues
+- **Default Priority**: Highest, High, Medium, Low, Lowest
+
+### Configuration Priority
+
+Settings are resolved in this order:
+1. **Command-line flags** - Override everything
+2. **Environment variables** - For CI/CD or temporary overrides
+3. **Project config** - `.jirarc.json` in current directory
+4. **Global config** - `~/.jirarc.json` in home directory
+
+### Example: Multiple Projects
+
+```bash
+# One-time global setup
+jira auth set
+# Host: yourcompany.atlassian.net
+# Email: you@example.com
+# Token: [your-api-token]
+
+# Configure CelestialBeacon
+cd ~/Code/CelestialBeacon
+jira init
+# Project: CB
+# Board: CelestialBeacon Board
+# Default Type: Task
+# Default Labels: game, celestial-beacon
+
+# Configure EvergreenExile
+cd ~/Code/EvergreenExile
+jira init
+# Project: EE
+# Board: EvergreenExile Board
+# Default Type: Story
+# Default Labels: game, evergreen-exile
+
+# Now each project uses its own settings automatically!
+cd ~/Code/CelestialBeacon && jira list  # Shows CB issues
+cd ~/Code/EvergreenExile && jira list   # Shows EE issues
+```
 
 ### Required Configuration
 
-- `JIRA_HOST`: Your Atlassian instance (e.g., `yourcompany.atlassian.net`)
-- `JIRA_EMAIL`: Your email address
-- `JIRA_TOKEN`: API token (not password) - [Generate here](https://id.atlassian.com/manage-profile/security/api-tokens)
-- `JIRA_PROJECT`: Default project key (e.g., `PROJ`)
+- **Global**: Host, Email, API Token - [Generate token here](https://id.atlassian.com/manage-profile/security/api-tokens)
+- **Project**: Project key (minimum requirement)
 
 ## Usage
 
