@@ -354,4 +354,72 @@ export class CoreClient extends BaseClient {
       method: 'DELETE',
     });
   }
+
+  /**
+   * Convert an issue to a sub-task of a parent issue
+   * This uses the move endpoint which handles both type change and parent assignment
+   */
+  async convertToSubtask(issueKey: string, parentKey: string): Promise<void> {
+    // First, get the Sub-task issue type ID for this project
+    const issue = await this.getIssue(issueKey);
+    const projectKey = issue.fields.project.key;
+    
+    // Get project issue types to find Sub-task
+    const projectMeta = await this.request<any>(
+      `rest/api/3/project/${projectKey}`
+    );
+    
+    // Find Sub-task issue type
+    let subtaskType = null;
+    if (projectMeta.issueTypes) {
+      subtaskType = projectMeta.issueTypes.find(
+        (type: any) => type.subtask === true || type.name.toLowerCase().includes('sub')
+      );
+    }
+    
+    if (!subtaskType) {
+      // Fallback: try common sub-task type names
+      subtaskType = { name: 'Sub-task' };
+    }
+
+    // Use the edit endpoint to update both type and parent
+    // Note: Some Jira configurations might require the move endpoint instead
+    try {
+      // Try using the standard update first
+      const updateData = {
+        fields: {
+          issuetype: { 
+            id: subtaskType.id || undefined,
+            name: subtaskType.name 
+          },
+          parent: { key: parentKey }
+        }
+      };
+
+      await this.request<void>(`rest/api/3/issue/${issueKey}`, {
+        method: 'PUT',
+        json: updateData,
+      });
+    } catch (error: any) {
+      // If standard update fails, try the move endpoint
+      if (error.response?.statusCode === 400) {
+        Logger.debug('Standard update failed, trying move endpoint');
+        
+        const moveData = {
+          fields: {
+            project: { key: projectKey },
+            issuetype: { name: 'Sub-task' },
+            parent: { key: parentKey }
+          }
+        };
+
+        await this.request<void>(`rest/api/3/issue/${issueKey}/move`, {
+          method: 'POST',
+          json: moveData,
+        });
+      } else {
+        throw error;
+      }
+    }
+  }
 }

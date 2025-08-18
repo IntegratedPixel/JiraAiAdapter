@@ -311,8 +311,19 @@ npm run jira create -- --type Bug --title "FPS drops to 4" --description "After 
 # Create a sub-task under a parent issue
 npm run jira create -- --type Sub-task --summary "Implement validation logic" --parent CV-13
 
+# Convert existing issue to sub-task
+npm run jira update CV-10 --parent CV-13
+
 # Update ticket status
-npm run jira update -- PROJ-123 --status "In Progress" --comment "Starting implementation"
+npm run jira update PROJ-123 --status "In Progress" --comment "Starting implementation"
+
+# Update multiple fields at once
+npm run jira update PROJ-123 --summary "New title" --priority High --assignee dev@example.com
+
+# Update labels
+npm run jira update PROJ-123 --labels add:urgent,backend
+npm run jira update PROJ-123 --labels remove:old-label
+npm run jira update PROJ-123 --labels set:new-label,another-label
 
 # Parse markdown file for issues
 npm run jira batch parse TODO.md --output issues.json

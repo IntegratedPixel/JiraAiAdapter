@@ -6,6 +6,7 @@ import { createInitCommand } from './commands/init.js';
 import { createListCommand } from './commands/list.js';
 import { createViewCommand } from './commands/view.js';
 import { createCreateCommand } from './commands/create.js';
+import { createUpdateCommand } from './commands/update.js';
 import { createDeleteCommand } from './commands/delete.js';
 import { createBatchCommand } from './commands/batch.js';
 import { Logger } from './utils/logger.js';
@@ -48,6 +49,7 @@ program.addCommand(createInitCommand());
 program.addCommand(createListCommand());
 program.addCommand(createViewCommand());
 program.addCommand(createCreateCommand());
+program.addCommand(createUpdateCommand());
 program.addCommand(createDeleteCommand());
 program.addCommand(createBatchCommand());
 

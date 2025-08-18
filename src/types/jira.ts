@@ -19,6 +19,15 @@ export interface JiraIssueFields {
   labels?: string[];
   components?: JiraComponent[];
   project: JiraProjectBasic;
+  parent?: {
+    key: string;
+    id?: string;
+    fields?: {
+      summary?: string;
+      status?: JiraStatus;
+      issuetype?: JiraIssueType;
+    };
+  };
   comment?: {
     comments: JiraComment[];
     total: number;
