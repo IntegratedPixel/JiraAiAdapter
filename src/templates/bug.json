@@ -1,0 +1,78 @@
+{
+  "issueType": "Bug",
+  "priority": "Major",
+  "template": {
+    "summary": "{{summary}}",
+    "description": "## Description\n{{description}}\n\n## Steps to Reproduce\n1. {{step1}}\n2. {{step2}}\n3. {{step3}}\n\n## Expected Behavior\n{{expected}}\n\n## Actual Behavior\n{{actual}}\n\n## Environment\n- OS: {{os}}\n- Version: {{version}}\n- Browser: {{browser}}\n\n## Additional Context\n{{context}}",
+    "labels": ["bug"],
+    "components": []
+  },
+  "prompts": [
+    {
+      "name": "summary",
+      "message": "Bug summary:",
+      "type": "input",
+      "required": true
+    },
+    {
+      "name": "description",
+      "message": "Brief description of the bug:",
+      "type": "input",
+      "required": true
+    },
+    {
+      "name": "step1",
+      "message": "Step 1 to reproduce:",
+      "type": "input",
+      "required": true
+    },
+    {
+      "name": "step2",
+      "message": "Step 2 to reproduce:",
+      "type": "input",
+      "default": ""
+    },
+    {
+      "name": "step3",
+      "message": "Step 3 to reproduce:",
+      "type": "input",
+      "default": ""
+    },
+    {
+      "name": "expected",
+      "message": "Expected behavior:",
+      "type": "input",
+      "required": true
+    },
+    {
+      "name": "actual",
+      "message": "Actual behavior:",
+      "type": "input",
+      "required": true
+    },
+    {
+      "name": "os",
+      "message": "Operating System:",
+      "type": "input",
+      "default": "macOS"
+    },
+    {
+      "name": "version",
+      "message": "Application version:",
+      "type": "input",
+      "default": "latest"
+    },
+    {
+      "name": "browser",
+      "message": "Browser (if applicable):",
+      "type": "input",
+      "default": "N/A"
+    },
+    {
+      "name": "context",
+      "message": "Additional context:",
+      "type": "input",
+      "default": ""
+    }
+  ]
+}

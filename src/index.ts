@@ -2,11 +2,14 @@
 
 import { Command } from 'commander';
 import { createAuthCommand } from './commands/auth.js';
+import { createListCommand } from './commands/list.js';
+import { createViewCommand } from './commands/view.js';
+import { createCreateCommand } from './commands/create.js';
 import { Logger } from './utils/logger.js';
 import { ErrorHandler } from './utils/error-handler.js';
 import { ConfigManager } from './config/jira.js';
 // Version will be injected during build
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
 const program = new Command();
 
@@ -24,30 +27,11 @@ program
     Logger.setJsonMode(opts.json || false);
   });
 
-// Add auth command
+// Add commands
 program.addCommand(createAuthCommand());
-
-// Add placeholder commands for Phase 2
-program
-  .command('list')
-  .description('List Jira issues (coming in Phase 2)')
-  .action(() => {
-    Logger.info('This command will be implemented in Phase 2');
-  });
-
-program
-  .command('view <issueKey>')
-  .description('View issue details (coming in Phase 2)')
-  .action(() => {
-    Logger.info('This command will be implemented in Phase 2');
-  });
-
-program
-  .command('create')
-  .description('Create a new issue (coming in Phase 2)')
-  .action(() => {
-    Logger.info('This command will be implemented in Phase 2');
-  });
+program.addCommand(createListCommand());
+program.addCommand(createViewCommand());
+program.addCommand(createCreateCommand());
 
 // Add help command that shows configuration status
 program
