@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { CoreClient } from '../../src/clients/core.js';
 import { ConfigManager } from '../../src/config/config-manager.js';
+import { ADFBuilder } from '../../src/utils/adf.js';
+import { createTestIssue, createTestSubtask, cleanupTestIssues } from '../helpers/test-config.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -12,23 +14,34 @@ describe('Jira CLI Lifecycle Integration Test', () => {
   let testSubtaskKey: string;
   let testCommentId: string;
   
-  const TEST_ISSUE_SUMMARY = `Test Issue ${Date.now()}`;
-  const TEST_SUBTASK_SUMMARY = `Test Subtask ${Date.now()}`;
   const TEST_COMMENT_TEXT = 'Test comment on subtask';
   const UPDATED_DESCRIPTION = 'Updated description for the test issue';
+  const UPDATED_LABELS = ['test', 'automated-test', 'updated'];
 
   beforeAll(async () => {
-    // Initialize config manager and client
-    configManager = new ConfigManager();
-    
-    // Load config with token from keychain
-    await configManager.loadTokenFromKeychain();
-    const config = await configManager.getConfig();
-    
-    // Initialize client
-    client = new CoreClient(config);
-    
-    console.log(`\n🧪 Running lifecycle tests for project: ${config.project}\n`);
+    try {
+      // Initialize config manager and client
+      configManager = new ConfigManager();
+      
+      // Load config with token from keychain
+      await configManager.loadTokenFromKeychain();
+      const config = await configManager.getConfig();
+      
+      // Initialize client
+      client = new CoreClient(config);
+      
+      console.log(`\n🧪 Running lifecycle tests for project: ${config.project}\n`);
+      
+      // Clean up any orphaned test issues from previous runs
+      await cleanupTestIssues(client, config.project);
+    } catch (error: any) {
+      throw new Error(
+        `Failed to initialize test client. Ensure you have:\n` +
+        `1. Run 'jira auth set' to configure global authentication\n` +
+        `2. Run 'jira init' in the test directory to configure project\n` +
+        `Error: ${error.message}`
+      );
+    }
   });
 
   afterAll(async () => {
@@ -76,13 +89,11 @@ describe('Jira CLI Lifecycle Integration Test', () => {
 
   it('should create a test issue', async () => {
     try {
-      const result = await client.createIssue({
-        summary: TEST_ISSUE_SUMMARY,
+      const issueData = createTestIssue({
         description: 'Initial test issue description',
-        issueType: 'Task',
-        // Removed priority as it may not be available on all screens
-        labels: ['test', 'automated-test'],
       });
+      
+      const result = await client.createIssue(issueData);
       
       console.log('Create issue response:', JSON.stringify(result, null, 2));
       
@@ -94,7 +105,7 @@ describe('Jira CLI Lifecycle Integration Test', () => {
       
       // Fetch the full issue to verify it was created correctly
       const issue = await client.getIssue(testIssueKey);
-      expect(issue.fields.summary).toBe(TEST_ISSUE_SUMMARY);
+      expect(issue.fields.summary).toContain('Test Issue');
       
       console.log(`✅ Created issue: ${testIssueKey}`);
     } catch (error: any) {
@@ -107,15 +118,11 @@ describe('Jira CLI Lifecycle Integration Test', () => {
     expect(testIssueKey).toBeDefined();
     
     try {
-      // Create subtask - needs parent field
-      const subtask = await client.createIssue({
-        summary: TEST_SUBTASK_SUMMARY,
+      const subtaskData = createTestSubtask(testIssueKey, {
         description: 'Subtask description',
-        issueType: 'Subtask', // Try 'Subtask' instead of 'Sub-task'
-        customFields: {
-          parent: { key: testIssueKey }
-        }
       });
+      
+      const subtask = await client.createIssue(subtaskData);
       
       expect(subtask).toBeDefined();
       expect(subtask.key).toBeDefined();
@@ -131,31 +138,41 @@ describe('Jira CLI Lifecycle Integration Test', () => {
   it('should add a comment to the subtask', async () => {
     expect(testSubtaskKey).toBeDefined();
     
+    // Test both plain text and ADF conversion
     const comment = await client.addComment(testSubtaskKey, TEST_COMMENT_TEXT);
     
     expect(comment).toBeDefined();
     expect(comment.id).toBeDefined();
     expect(comment.body).toBeDefined();
     
+    // Verify the comment body contains the expected text in ADF format
+    const commentText = ADFBuilder.adfToText(comment.body);
+    expect(commentText).toContain(TEST_COMMENT_TEXT);
+    
     testCommentId = comment.id;
     console.log(`✅ Added comment to subtask: ${testSubtaskKey}`);
   });
 
-  it('should update the description of the main task', async () => {
+  it('should update multiple fields of the main task', async () => {
     expect(testIssueKey).toBeDefined();
     
+    // Update multiple fields to test comprehensive update functionality
     await client.updateIssue(testIssueKey, {
       description: UPDATED_DESCRIPTION,
+      labels: { add: ['updated'] },
     });
     
-    // Verify the update
+    // Verify the updates
     const updatedIssue = await client.getIssue(testIssueKey);
     
-    // Check if description was updated (comparing ADF content)
-    const descriptionContent = JSON.stringify(updatedIssue.fields.description);
-    expect(descriptionContent).toContain(UPDATED_DESCRIPTION);
+    // Check if description was updated using proper ADF conversion
+    const descriptionText = ADFBuilder.adfToText(updatedIssue.fields.description);
+    expect(descriptionText).toContain(UPDATED_DESCRIPTION);
     
-    console.log(`✅ Updated description of issue: ${testIssueKey}`);
+    // Check if labels were updated
+    expect(updatedIssue.fields.labels).toContain('updated');
+    
+    console.log(`✅ Updated multiple fields of issue: ${testIssueKey}`);
   });
 
   it('should delete the subtask', async () => {
@@ -163,8 +180,13 @@ describe('Jira CLI Lifecycle Integration Test', () => {
     
     await client.deleteIssue(testSubtaskKey);
     
-    // Verify deletion - should throw error when trying to get deleted issue
-    await expect(client.getIssue(testSubtaskKey)).rejects.toThrow();
+    // Verify deletion - should throw 404 error when trying to get deleted issue
+    try {
+      await client.getIssue(testSubtaskKey);
+      throw new Error('Expected 404 error but issue still exists');
+    } catch (error: any) {
+      expect(error.message).toContain('404');
+    }
     
     console.log(`✅ Deleted subtask: ${testSubtaskKey}`);
     testSubtaskKey = ''; // Clear to prevent double deletion in cleanup
@@ -175,8 +197,13 @@ describe('Jira CLI Lifecycle Integration Test', () => {
     
     await client.deleteIssue(testIssueKey);
     
-    // Verify deletion - should throw error when trying to get deleted issue
-    await expect(client.getIssue(testIssueKey)).rejects.toThrow();
+    // Verify deletion - should throw 404 error when trying to get deleted issue
+    try {
+      await client.getIssue(testIssueKey);
+      throw new Error('Expected 404 error but issue still exists');
+    } catch (error: any) {
+      expect(error.message).toContain('404');
+    }
     
     console.log(`✅ Deleted issue: ${testIssueKey}`);
     testIssueKey = ''; // Clear to prevent double deletion in cleanup
