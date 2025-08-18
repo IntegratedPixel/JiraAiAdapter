@@ -1,0 +1,291 @@
+import { cosmiconfigSync } from 'cosmiconfig';
+import { homedir } from 'os';
+import { resolve } from 'path';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
+import * as keytar from 'keytar';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+export interface GlobalConfig {
+  host: string;
+  email: string;
+  apiToken?: string;
+}
+
+export interface ProjectConfig {
+  project: string;
+  board?: string;
+  defaultIssueType?: string;
+  defaultAssignee?: string;
+  defaultLabels?: string[];
+  defaultPriority?: string;
+}
+
+export interface JiraFullConfig extends GlobalConfig, ProjectConfig {}
+
+export class ConfigManager {
+  private static readonly SERVICE_NAME = 'jira-cli';
+  private static readonly GLOBAL_CONFIG_PATH = resolve(homedir(), '.jirarc.json');
+  
+  private static readonly explorer = cosmiconfigSync('jira', {
+    searchPlaces: [
+      '.jirarc.json',
+      '.jirarc',
+      'package.json',
+    ],
+  });
+
+  private globalConfig: Partial<GlobalConfig> = {};
+  private projectConfig: Partial<ProjectConfig> = {};
+  private configLoaded = false;
+
+  constructor() {
+    this.loadConfigs();
+  }
+
+  private loadConfigs(): void {
+    // 1. Load global config (auth credentials)
+    this.loadGlobalConfig();
+    
+    // 2. Load project-specific config (from current directory)
+    this.loadProjectConfig();
+    
+    // 3. Apply environment variable overrides
+    this.applyEnvironmentOverrides();
+    
+    this.configLoaded = true;
+  }
+
+  private loadGlobalConfig(): void {
+    try {
+      if (existsSync(ConfigManager.GLOBAL_CONFIG_PATH)) {
+        const content = readFileSync(ConfigManager.GLOBAL_CONFIG_PATH, 'utf-8');
+        const config = JSON.parse(content);
+        this.globalConfig = {
+          host: config.host,
+          email: config.email,
+          // Note: apiToken should be in keychain, not in file
+        };
+      }
+    } catch (error) {
+      // Global config doesn't exist or is invalid, that's ok
+    }
+  }
+
+  private loadProjectConfig(): void {
+    // Search for project config in current directory tree
+    const searchResult = ConfigManager.explorer.search();
+    
+    if (searchResult) {
+      // Extract only project-specific settings
+      const config = searchResult.config;
+      this.projectConfig = {
+        project: config.project,
+        board: config.board,
+        defaultIssueType: config.defaultIssueType,
+        defaultAssignee: config.defaultAssignee,
+        defaultLabels: config.defaultLabels,
+        defaultPriority: config.defaultPriority,
+      };
+    }
+  }
+
+  private applyEnvironmentOverrides(): void {
+    // Global settings from env
+    if (process.env.JIRA_HOST) {
+      this.globalConfig.host = process.env.JIRA_HOST;
+    }
+    if (process.env.JIRA_EMAIL) {
+      this.globalConfig.email = process.env.JIRA_EMAIL;
+    }
+    if (process.env.JIRA_TOKEN) {
+      this.globalConfig.apiToken = process.env.JIRA_TOKEN;
+    }
+    
+    // Project settings from env
+    if (process.env.JIRA_PROJECT) {
+      this.projectConfig.project = process.env.JIRA_PROJECT;
+    }
+    if (process.env.JIRA_BOARD) {
+      this.projectConfig.board = process.env.JIRA_BOARD;
+    }
+    if (process.env.JIRA_DEFAULT_ISSUE_TYPE) {
+      this.projectConfig.defaultIssueType = process.env.JIRA_DEFAULT_ISSUE_TYPE;
+    }
+  }
+
+  async loadTokenFromKeychain(): Promise<void> {
+    if (!this.configLoaded) {
+      throw new Error('Config not loaded');
+    }
+
+    // Try to load token from keychain if not already set
+    if (this.globalConfig.email && !this.globalConfig.apiToken) {
+      try {
+        const token = await keytar.getPassword(
+          ConfigManager.SERVICE_NAME, 
+          this.globalConfig.email
+        );
+        if (token) {
+          this.globalConfig.apiToken = token;
+        }
+      } catch (error) {
+        // Keychain not available, token remains from env or empty
+      }
+    }
+  }
+
+  async getConfig(): Promise<JiraFullConfig> {
+    await this.loadTokenFromKeychain();
+    
+    const config: JiraFullConfig = {
+      // Global settings
+      host: this.globalConfig.host || '',
+      email: this.globalConfig.email || '',
+      apiToken: this.globalConfig.apiToken || '',
+      
+      // Project settings
+      project: this.projectConfig.project || '',
+      board: this.projectConfig.board,
+      defaultIssueType: this.projectConfig.defaultIssueType || 'Task',
+      defaultAssignee: this.projectConfig.defaultAssignee,
+      defaultLabels: this.projectConfig.defaultLabels,
+      defaultPriority: this.projectConfig.defaultPriority,
+    };
+    
+    return config;
+  }
+
+  getPartialConfig(): Partial<JiraFullConfig> {
+    return {
+      ...this.globalConfig,
+      ...this.projectConfig,
+    };
+  }
+
+  async saveGlobalConfig(config: GlobalConfig): Promise<void> {
+    // Save host and email to global config file
+    const globalData = {
+      host: config.host,
+      email: config.email,
+      // Never save token to file
+    };
+    
+    writeFileSync(
+      ConfigManager.GLOBAL_CONFIG_PATH,
+      JSON.stringify(globalData, null, 2)
+    );
+    
+    // Save token to keychain
+    if (config.apiToken) {
+      await this.setToken(config.email, config.apiToken);
+    }
+    
+    // Reload config
+    this.loadConfigs();
+  }
+
+  async saveProjectConfig(config: ProjectConfig): Promise<void> {
+    const projectConfigPath = resolve(process.cwd(), '.jirarc.json');
+    
+    // Read existing config if it exists
+    let existingConfig = {};
+    if (existsSync(projectConfigPath)) {
+      try {
+        const content = readFileSync(projectConfigPath, 'utf-8');
+        existingConfig = JSON.parse(content);
+      } catch {
+        // Invalid JSON, will be overwritten
+      }
+    }
+    
+    // Merge with new config
+    const newConfig = {
+      ...existingConfig,
+      ...config,
+    };
+    
+    // Save to file
+    writeFileSync(
+      projectConfigPath,
+      JSON.stringify(newConfig, null, 2)
+    );
+    
+    // Reload config
+    this.loadConfigs();
+  }
+
+  async setToken(email: string, token: string): Promise<void> {
+    try {
+      await keytar.setPassword(ConfigManager.SERVICE_NAME, email, token);
+    } catch (error) {
+      throw new Error(`Failed to store token in keychain: ${error}`);
+    }
+  }
+
+  async deleteToken(email: string): Promise<void> {
+    try {
+      await keytar.deletePassword(ConfigManager.SERVICE_NAME, email);
+    } catch (error) {
+      throw new Error(`Failed to delete token from keychain: ${error}`);
+    }
+  }
+
+  validateGlobal(): string[] {
+    const errors: string[] = [];
+    
+    if (!this.globalConfig.host) {
+      errors.push('JIRA_HOST is required (e.g., yourcompany.atlassian.net)');
+    }
+    
+    if (!this.globalConfig.email) {
+      errors.push('JIRA_EMAIL is required');
+    }
+    
+    if (!this.globalConfig.apiToken) {
+      errors.push('JIRA_TOKEN is required (API token, not password)');
+    }
+    
+    return errors;
+  }
+
+  validateProject(): string[] {
+    const errors: string[] = [];
+    
+    if (!this.projectConfig.project) {
+      errors.push('JIRA_PROJECT is required for this operation');
+    }
+    
+    return errors;
+  }
+
+  validate(): string[] {
+    return [...this.validateGlobal(), ...this.validateProject()];
+  }
+
+  async isConfigured(): Promise<boolean> {
+    await this.loadTokenFromKeychain();
+    return this.validateGlobal().length === 0;
+  }
+
+  async isProjectConfigured(): Promise<boolean> {
+    return this.validateProject().length === 0;
+  }
+
+  getCurrentProject(): string | undefined {
+    return this.projectConfig.project;
+  }
+
+  getConfigSource(): { global: string; project: string | null } {
+    const projectSearch = ConfigManager.explorer.search();
+    
+    return {
+      global: ConfigManager.GLOBAL_CONFIG_PATH,
+      project: projectSearch ? projectSearch.filepath : null,
+    };
+  }
+}
+
+// Maintain backward compatibility
+export { ConfigManager as default };
