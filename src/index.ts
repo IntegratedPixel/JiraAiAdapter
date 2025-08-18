@@ -5,11 +5,17 @@ import { createAuthCommand } from './commands/auth.js';
 import { createListCommand } from './commands/list.js';
 import { createViewCommand } from './commands/view.js';
 import { createCreateCommand } from './commands/create.js';
+import { createUpdateCommand } from './commands/update.js';
+import { createCommentCommand } from './commands/comment.js';
+import { createSprintCommand } from './commands/sprint.js';
+import { createAttachCommand } from './commands/attach.js';
+import { createLinkCommand } from './commands/link.js';
+import { createWatchCommand } from './commands/watch.js';
 import { Logger } from './utils/logger.js';
 import { ErrorHandler } from './utils/error-handler.js';
 import { ConfigManager } from './config/jira.js';
 // Version will be injected during build
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 
 const program = new Command();
 
@@ -32,6 +38,12 @@ program.addCommand(createAuthCommand());
 program.addCommand(createListCommand());
 program.addCommand(createViewCommand());
 program.addCommand(createCreateCommand());
+program.addCommand(createUpdateCommand());
+program.addCommand(createCommentCommand());
+program.addCommand(createSprintCommand());
+program.addCommand(createAttachCommand());
+program.addCommand(createLinkCommand());
+program.addCommand(createWatchCommand());
 
 // Add help command that shows configuration status
 program

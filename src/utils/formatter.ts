@@ -224,4 +224,32 @@ export class Formatter {
     
     return item;
   }
+
+  /**
+   * Format sprint header
+   */
+  static formatSprintHeader(sprint: any): string {
+    const lines: string[] = [];
+    
+    lines.push(chalk.bold.cyan(`🏃 Sprint: ${sprint.name}`));
+    lines.push(chalk.gray('─'.repeat(50)));
+    
+    const statusColor = sprint.state === 'active' ? 'green' : 
+                       sprint.state === 'future' ? 'yellow' : 'gray';
+    lines.push(`Status: ${chalk[statusColor](sprint.state.toUpperCase())}`);
+    
+    if (sprint.startDate) {
+      lines.push(`Start: ${new Date(sprint.startDate).toLocaleDateString()}`);
+    }
+    
+    if (sprint.endDate) {
+      lines.push(`End: ${new Date(sprint.endDate).toLocaleDateString()}`);
+    }
+    
+    if (sprint.goal) {
+      lines.push(`Goal: ${sprint.goal}`);
+    }
+    
+    return lines.join('\n');
+  }
 }

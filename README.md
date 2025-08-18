@@ -142,6 +142,112 @@ jira create --template feature --dry-run
 jira create --description-file ./issue-description.md
 ```
 
+### Update Issue
+
+```bash
+# Update issue status (transition)
+jira update PROJ-123 --status "In Progress"
+
+# Update multiple fields
+jira update PROJ-123 --priority High --assignee "john@example.com"
+
+# Add/remove labels
+jira update PROJ-123 --labels "add:backend,api remove:frontend"
+
+# Set labels (replace all)
+jira update PROJ-123 --labels "set:urgent,production"
+
+# Assign to yourself
+jira update PROJ-123 --assignee me
+
+# Unassign issue
+jira update PROJ-123 --assignee unassigned
+
+# Add comment with update
+jira update PROJ-123 --status "Done" --comment "Fixed in PR #42"
+
+# Dry run to preview changes
+jira update PROJ-123 --priority Critical --dry-run
+```
+
+### Comment on Issues
+
+```bash
+# Add a simple comment
+jira comment PROJ-123 "This is my comment"
+
+# Add comment from file
+jira comment PROJ-123 --file ./comment.md
+
+# Mention users in comment
+jira comment PROJ-123 "Please review" --mention john@example.com jane@example.com
+
+# Preview comment without posting
+jira comment PROJ-123 "Draft comment" --dry-run
+```
+
+### Sprint Management
+
+```bash
+# View current sprint
+jira sprint
+
+# View next sprint
+jira sprint --next
+
+# View specific sprint by name
+jira sprint --name "Sprint 23"
+
+# Specify board (if not configured)
+jira sprint --board "My Team Board"
+
+# Get sprint with custom fields
+jira sprint --fields key,summary,status,assignee
+```
+
+### Attach Files
+
+```bash
+# Attach a file to an issue
+jira attach PROJ-123 ./screenshot.png
+
+# Attach multiple files (run command multiple times)
+jira attach PROJ-123 ./log1.txt
+jira attach PROJ-123 ./log2.txt
+
+# Preview attachment (dry run)
+jira attach PROJ-123 ./large-file.pdf --dry-run
+```
+
+### Link Issues
+
+```bash
+# Create a link between issues
+jira link PROJ-123 PROJ-456 --type "blocks"
+
+# Default link type is "relates to"
+jira link PROJ-123 PROJ-789
+
+# List available link types
+jira link --list
+
+# Preview link creation
+jira link PROJ-123 PROJ-456 --type "duplicates" --dry-run
+```
+
+### Watch Issues
+
+```bash
+# Start watching an issue
+jira watch PROJ-123
+
+# Stop watching an issue
+jira watch PROJ-123 --unwatch
+
+# List watchers for an issue
+jira watch PROJ-123 --list
+```
+
 ### Global Options
 
 ```bash

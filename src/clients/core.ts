@@ -7,15 +7,10 @@ import {
   JiraCreateIssue,
   JiraCreateMeta,
   JiraComment,
+  JiraUser,
 } from '../types/jira.js';
 import { ADFBuilder } from '../utils/adf.js';
 
-export interface JiraUser {
-  accountId: string;
-  emailAddress: string;
-  displayName: string;
-  self: string;
-}
 
 export interface JiraProject {
   id: string;
@@ -172,9 +167,19 @@ export class CoreClient extends BaseClient {
   }
 
   /**
-   * Update an existing issue
+   * Update an existing issue (generic method)
    */
-  async updateIssue(issueKey: string, options: UpdateIssueOptions): Promise<void> {
+  async updateIssue(issueKey: string, updates: any): Promise<void> {
+    await this.request<void>(`rest/api/3/issue/${issueKey}`, {
+      method: 'PUT',
+      json: updates,
+    });
+  }
+
+  /**
+   * Update an existing issue with options
+   */
+  async updateIssueWithOptions(issueKey: string, options: UpdateIssueOptions): Promise<void> {
     const updateData: any = {
       fields: {},
     };
@@ -219,10 +224,7 @@ export class CoreClient extends BaseClient {
       Object.assign(updateData.fields, options.customFields);
     }
 
-    await this.request<void>(`rest/api/3/issue/${issueKey}`, {
-      method: 'PUT',
-      json: updateData,
-    });
+    await this.updateIssue(issueKey, updateData);
   }
 
   /**
@@ -264,16 +266,12 @@ export class CoreClient extends BaseClient {
   }
 
   /**
-   * Add a comment to an issue
+   * Add a comment to an issue (accepts ADF body)
    */
-  async addComment(issueKey: string, comment: string): Promise<JiraComment> {
-    const data = {
-      body: ADFBuilder.textToADF(comment),
-    };
-
+  async addComment(issueKey: string, body: any): Promise<JiraComment> {
     return this.request<JiraComment>(`rest/api/3/issue/${issueKey}/comment`, {
       method: 'POST',
-      json: data,
+      json: { body },
     });
   }
 
@@ -319,5 +317,157 @@ export class CoreClient extends BaseClient {
     params.append('expand', 'projects.issuetypes.fields');
     
     return this.request<JiraCreateMeta>(`rest/api/3/issue/createmeta?${params.toString()}`);
+  }
+
+
+  /**
+   * Get current user
+   */
+  async getCurrentUser(): Promise<JiraUser> {
+    return this.request<JiraUser>('rest/api/3/myself');
+  }
+
+  /**
+   * Search for users
+   */
+  async searchUsers(query: string): Promise<JiraUser[]> {
+    const params = new URLSearchParams();
+    params.append('query', query);
+    params.append('maxResults', '10');
+    
+    return this.request<JiraUser[]>(`rest/api/3/user/search?${params.toString()}`);
+  }
+
+  /**
+   * Get boards for a project (Agile API)
+   */
+  async getBoards(projectKey?: string): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (projectKey) {
+      params.append('projectKeyOrId', projectKey);
+    }
+    params.append('maxResults', '50');
+    
+    const response = await this.request<{ values: any[] }>(
+      `rest/agile/1.0/board?${params.toString()}`
+    );
+    return response.values;
+  }
+
+  /**
+   * Get board by name
+   */
+  async getBoardByName(name: string): Promise<any | null> {
+    const params = new URLSearchParams();
+    params.append('name', name);
+    params.append('maxResults', '1');
+    
+    const response = await this.request<{ values: any[] }>(
+      `rest/agile/1.0/board?${params.toString()}`
+    );
+    return response.values.length > 0 ? response.values[0] : null;
+  }
+
+  /**
+   * Get sprints for a board
+   */
+  async getSprints(boardId: number): Promise<any[]> {
+    const params = new URLSearchParams();
+    params.append('maxResults', '50');
+    
+    const response = await this.request<{ values: any[] }>(
+      `rest/agile/1.0/board/${boardId}/sprint?${params.toString()}`
+    );
+    return response.values;
+  }
+
+  /**
+   * Get issues in a sprint
+   */
+  async getSprintIssues(boardId: number, sprintId: number, fields?: string[]): Promise<JiraIssue[]> {
+    const params = new URLSearchParams();
+    params.append('maxResults', '100');
+    if (fields && fields.length > 0) {
+      params.append('fields', fields.join(','));
+    }
+    
+    const response = await this.request<{ issues: JiraIssue[] }>(
+      `rest/agile/1.0/board/${boardId}/sprint/${sprintId}/issue?${params.toString()}`
+    );
+    return response.issues;
+  }
+
+  /**
+   * Upload an attachment to an issue
+   */
+  async uploadAttachment(issueKey: string, filePath: string): Promise<any> {
+    const FormData = (await import('form-data')).default;
+    const { createReadStream } = await import('fs');
+    const { basename } = await import('path');
+    
+    const form = new FormData();
+    form.append('file', createReadStream(filePath), basename(filePath));
+
+    const response = await this.request<any[]>(
+      `rest/api/3/issue/${issueKey}/attachments`,
+      {
+        method: 'POST',
+        headers: {
+          'X-Atlassian-Token': 'no-check',
+          ...form.getHeaders()
+        },
+        body: form
+      }
+    );
+
+    return response[0]; // Jira returns an array of attachments
+  }
+
+  /**
+   * Create an issue link
+   */
+  async createIssueLink(fromKey: string, toKey: string, linkType: string): Promise<void> {
+    await this.request(
+      'rest/api/3/issueLink',
+      {
+        method: 'POST',
+        json: {
+          type: { name: linkType },
+          inwardIssue: { key: fromKey },
+          outwardIssue: { key: toKey }
+        }
+      }
+    );
+  }
+
+  /**
+   * Get issue link types
+   */
+  async getIssueLinkTypes(): Promise<any[]> {
+    const response = await this.request<{ issueLinkTypes: any[] }>(
+      'rest/api/3/issueLinkType'
+    );
+    return response.issueLinkTypes;
+  }
+
+  /**
+   * Watch/unwatch an issue
+   */
+  async watchIssue(issueKey: string, watch: boolean = true): Promise<void> {
+    const method = watch ? 'POST' : 'DELETE';
+    await this.request(
+      `rest/api/3/issue/${issueKey}/watchers`,
+      {
+        method,
+        json: watch ? { accountId: (await this.getCurrentUser()).accountId } : undefined
+      }
+    );
+  }
+
+  /**
+   * Get watchers for an issue
+   */
+  async getWatchers(issueKey: string): Promise<any> {
+    return this.request(`rest/api/3/issue/${issueKey}/watchers`);
   }
 }
