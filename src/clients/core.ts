@@ -357,7 +357,7 @@ export class CoreClient extends BaseClient {
 
   /**
    * Convert an issue to a sub-task of a parent issue
-   * This uses the move endpoint which handles both type change and parent assignment
+   * This tries multiple approaches as different Jira configurations support different methods
    */
   async convertToSubtask(issueKey: string, parentKey: string): Promise<void> {
     Logger.debug(`Converting ${issueKey} to sub-task of ${parentKey}`);
@@ -366,28 +366,67 @@ export class CoreClient extends BaseClient {
     const issue = await this.getIssue(issueKey);
     const projectKey = issue.fields.project.key;
     
-    // Get project issue types to find Sub-task
-    const projectMeta = await this.request<any>(
-      `rest/api/3/project/${projectKey}`
-    );
+    // Check if it's already the right type and just needs parent
+    if (issue.fields.issuetype?.subtask || issue.fields.issuetype?.name?.toLowerCase().includes('sub')) {
+      Logger.debug('Issue is already a sub-task type, just setting parent');
+      try {
+        const updateData = {
+          fields: {
+            parent: { key: parentKey }
+          }
+        };
+        
+        await this.request<void>(`rest/api/3/issue/${issueKey}`, {
+          method: 'PUT',
+          json: updateData,
+        });
+        return;
+      } catch (error: any) {
+        Logger.debug('Failed to set parent on existing sub-task:', error.response?.body);
+      }
+    }
     
-    // Find Sub-task issue type
+    // Get available issue types for the project
     let subtaskType = null;
-    if (projectMeta.issueTypes) {
-      subtaskType = projectMeta.issueTypes.find(
-        (type: any) => type.subtask === true || type.name.toLowerCase().includes('sub')
+    try {
+      // Try to get create metadata which includes available issue types
+      const createMeta = await this.request<any>(
+        `rest/api/3/issue/createmeta?projectKeys=${projectKey}&expand=projects.issuetypes`
       );
+      
+      if (createMeta.projects && createMeta.projects[0]) {
+        const project = createMeta.projects[0];
+        subtaskType = project.issuetypes?.find(
+          (type: any) => type.subtask === true || type.name?.toLowerCase() === 'sub-task'
+        );
+      }
+    } catch (error) {
+      Logger.debug('Could not fetch create metadata');
+    }
+    
+    // Fallback: try to get project details
+    if (!subtaskType) {
+      try {
+        const projectMeta = await this.request<any>(`rest/api/3/project/${projectKey}`);
+        if (projectMeta.issueTypes) {
+          subtaskType = projectMeta.issueTypes.find(
+            (type: any) => type.subtask === true || type.name?.toLowerCase() === 'sub-task'
+          );
+        }
+      } catch (error) {
+        Logger.debug('Could not fetch project metadata');
+      }
     }
     
     if (!subtaskType) {
-      // Fallback: try common sub-task type names
+      // Last resort: try common sub-task type names
       subtaskType = { name: 'Sub-task' };
     }
 
-    // Use the edit endpoint to update both type and parent
-    // Note: Some Jira configurations might require the move endpoint instead
+    // Try different update approaches
     try {
-      // Try using the standard update first
+      // Approach 1: Update both fields together
+      Logger.debug('Trying to update type and parent together');
       const updateData = {
         fields: {
           issuetype: { 
@@ -452,7 +491,13 @@ export class CoreClient extends BaseClient {
           });
         } catch (moveError: any) {
           if (moveError.response?.statusCode === 404) {
-            throw new Error('Move endpoint not available. Issue type conversion may not be supported in this Jira instance.');
+            throw new Error(
+              `Issue type conversion not supported in this Jira instance.\n` +
+              `\nWorkaround options:\n` +
+              `1. Create a new sub-task: jira create --type Sub-task --summary "<summary>" --parent ${parentKey}\n` +
+              `2. Link the issues: Use Jira web UI to create a "relates to" link\n` +
+              `3. Clone as sub-task: In Jira web UI, clone ${issueKey} as a Sub-task of ${parentKey}`
+            );
           }
           throw moveError;
         }

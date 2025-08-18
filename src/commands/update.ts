@@ -171,9 +171,30 @@ export function createUpdateCommand(): Command {
               throw new Error('Changing parent of existing sub-task is not yet supported');
             }
           } else {
-            // Convert to sub-task
-            await client.convertToSubtask(issueKey, options.parent);
-            Logger.success(`Converted to sub-task of ${options.parent}`);
+            // Check if the issue type is actually named Sub-task but not marked as subtask
+            if (currentIssue.fields.issuetype?.name?.toLowerCase().includes('sub')) {
+              Logger.info('Issue type appears to be Sub-task, attempting to set parent only');
+            }
+            
+            // Try to convert to sub-task
+            try {
+              await client.convertToSubtask(issueKey, options.parent);
+              Logger.success(`Converted to sub-task of ${options.parent}`);
+            } catch (error: any) {
+              // If conversion fails, provide helpful context
+              if (error.message?.includes('Issue type conversion not supported')) {
+                Logger.error('\n' + error.message);
+                
+                // Check if we can at least tell the user the current state
+                Logger.info(`\nCurrent issue details:`);
+                Logger.info(`- Key: ${currentIssue.key}`);
+                Logger.info(`- Type: ${currentIssue.fields.issuetype?.name}`);
+                Logger.info(`- Is Subtask: ${currentIssue.fields.issuetype?.subtask ? 'Yes' : 'No'}`);
+                
+                throw new Error('Cannot convert issue type in this Jira configuration');
+              }
+              throw error;
+            }
           }
         }
 
