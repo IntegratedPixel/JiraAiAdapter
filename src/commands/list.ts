@@ -4,6 +4,7 @@ import { CoreClient } from '../clients/core.js';
 import { Logger } from '../utils/logger.js';
 import { ErrorHandler } from '../utils/error-handler.js';
 import { Formatter } from '../utils/formatter.js';
+import { JQLSanitizer } from '../utils/jql-sanitizer.js';
 
 export function createListCommand(): Command {
   const list = new Command('list')
@@ -30,14 +31,15 @@ export function createListCommand(): Command {
         const jqlParts: string[] = [];
 
         if (options.jql) {
-          // Use custom JQL if provided
-          jql = options.jql;
+          // Use custom JQL if provided (validate it first)
+          jql = JQLSanitizer.validateJQL(options.jql);
         } else {
-          // Build JQL from options
-          jqlParts.push(`project = ${config.project}`);
+          // Build JQL from options with proper sanitization
+          const projectKey = JQLSanitizer.sanitizeProjectKey(config.project);
+          jqlParts.push(`project = ${projectKey}`);
 
           if (options.status) {
-            jqlParts.push(`status = "${options.status}"`);
+            jqlParts.push(`status = ${JQLSanitizer.sanitizeFieldValue(options.status)}`);
           }
 
           if (options.mine) {
@@ -48,21 +50,23 @@ export function createListCommand(): Command {
             } else if (options.assignee === 'unassigned') {
               jqlParts.push('assignee is EMPTY');
             } else {
-              jqlParts.push(`assignee = "${options.assignee}"`);
+              jqlParts.push(`assignee = ${JQLSanitizer.sanitizeFieldValue(options.assignee)}`);
             }
           }
 
           if (options.type) {
-            jqlParts.push(`issuetype = "${options.type}"`);
+            jqlParts.push(`issuetype = ${JQLSanitizer.sanitizeFieldValue(options.type)}`);
           }
 
           if (options.priority) {
-            jqlParts.push(`priority = "${options.priority}"`);
+            jqlParts.push(`priority = ${JQLSanitizer.sanitizeFieldValue(options.priority)}`);
           }
 
           if (options.labels) {
             const labels = options.labels.split(',').map((l: string) => l.trim());
-            const labelQuery = labels.map((l: string) => `labels = "${l}"`).join(' AND ');
+            const labelQuery = labels.map((l: string) => 
+              `labels = ${JQLSanitizer.sanitizeFieldValue(l)}`
+            ).join(' AND ');
             jqlParts.push(`(${labelQuery})`);
           }
 
@@ -72,7 +76,7 @@ export function createListCommand(): Command {
             } else if (options.sprint === 'next') {
               jqlParts.push('sprint in futureSprints()');
             } else {
-              jqlParts.push(`sprint = "${options.sprint}"`);
+              jqlParts.push(`sprint = ${JQLSanitizer.sanitizeFieldValue(options.sprint)}`);
             }
           }
 
