@@ -19,6 +19,9 @@ export function createInitCommand(): Command {
       try {
         const configManager = new ConfigManager();
         
+        // Load token from keychain or file before validating
+        await configManager.loadTokenFromKeychain();
+        
         // Check if global auth is configured
         const globalErrors = configManager.validateGlobal();
         if (globalErrors.length > 0) {

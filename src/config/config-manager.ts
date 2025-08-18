@@ -123,15 +123,18 @@ export class ConfigManager {
     // Try to load token from keychain if not already set
     if (this.globalConfig.email && !this.globalConfig.apiToken) {
       try {
-        const token = await keytar.getPassword(
-          ConfigManager.SERVICE_NAME, 
-          this.globalConfig.email
-        );
-        if (token) {
-          this.globalConfig.apiToken = token;
+        // Check if keytar is available
+        if (typeof keytar.getPassword === 'function') {
+          const token = await keytar.getPassword(
+            ConfigManager.SERVICE_NAME, 
+            this.globalConfig.email
+          );
+          if (token) {
+            this.globalConfig.apiToken = token;
+          }
         }
       } catch (error) {
-        // Keychain not available, token remains from env or empty
+        // Keychain not available, token remains from env or file
       }
     }
   }
@@ -166,21 +169,26 @@ export class ConfigManager {
 
   async saveGlobalConfig(config: GlobalConfig): Promise<void> {
     // Save host and email to global config file
-    const globalData = {
+    const globalData: any = {
       host: config.host,
       email: config.email,
-      // Never save token to file
     };
+    
+    // Try to save token to keychain, fall back to file if needed
+    if (config.apiToken) {
+      try {
+        await this.setToken(config.email, config.apiToken);
+      } catch (error) {
+        console.warn('⚠️  Keychain not available, storing token in config file (less secure)');
+        console.warn('   Consider using environment variable JIRA_TOKEN for better security');
+        globalData.apiToken = config.apiToken;
+      }
+    }
     
     writeFileSync(
       ConfigManager.GLOBAL_CONFIG_PATH,
       JSON.stringify(globalData, null, 2)
     );
-    
-    // Save token to keychain
-    if (config.apiToken) {
-      await this.setToken(config.email, config.apiToken);
-    }
     
     // Reload config
     this.loadConfigs();
@@ -218,7 +226,12 @@ export class ConfigManager {
 
   async setToken(email: string, token: string): Promise<void> {
     try {
-      await keytar.setPassword(ConfigManager.SERVICE_NAME, email, token);
+      // Check if keytar is available and has the required function
+      if (typeof keytar.setPassword === 'function') {
+        await keytar.setPassword(ConfigManager.SERVICE_NAME, email, token);
+      } else {
+        throw new Error('keytar.setPassword is not a function');
+      }
     } catch (error) {
       throw new Error(`Failed to store token in keychain: ${error}`);
     }
