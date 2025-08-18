@@ -206,6 +206,17 @@ function parseLabelOperations(labelString: string): LabelOperation {
       
       const labels = values.split(',').map(l => l.trim()).filter(Boolean);
       
+      // Validate label names (Jira labels cannot contain spaces or certain special characters)
+      for (const label of labels) {
+        if (label.includes(' ')) {
+          throw new Error(`Invalid label "${label}": labels cannot contain spaces`);
+        }
+        // Jira typically restricts labels to alphanumeric, hyphen, underscore
+        if (!/^[a-zA-Z0-9_-]+$/.test(label)) {
+          throw new Error(`Invalid label "${label}": labels can only contain letters, numbers, hyphens, and underscores`);
+        }
+      }
+      
       switch (operation.toLowerCase()) {
         case 'add':
           ops.add.push(...labels);
