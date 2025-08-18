@@ -185,20 +185,23 @@ export function createCreateCommand(): Command {
 
         Logger.stopSpinner(true, `Issue ${createdIssue.key} created successfully!`);
 
+        // Fetch the full issue details to get all fields
+        const fullIssue = await client.getIssue(createdIssue.key);
+
         if (Logger.isJsonMode()) {
           ErrorHandler.success({
-            key: createdIssue.key,
-            url: `https://${config.host}/browse/${createdIssue.key}`,
-            summary: createdIssue.fields.summary,
-            type: createdIssue.fields.issuetype?.name,
-            status: createdIssue.fields.status?.name,
+            key: fullIssue.key,
+            url: `https://${config.host}/browse/${fullIssue.key}`,
+            summary: fullIssue.fields.summary,
+            type: fullIssue.fields.issuetype?.name,
+            status: fullIssue.fields.status?.name,
           });
         } else {
-          Logger.success(`\nIssue created: ${createdIssue.key}`);
-          Logger.info(`Summary: ${createdIssue.fields.summary}`);
-          Logger.info(`Type: ${createdIssue.fields.issuetype?.name}`);
-          Logger.info(`Status: ${createdIssue.fields.status?.name}`);
-          Logger.info(`URL: https://${config.host}/browse/${createdIssue.key}`);
+          Logger.success(`\nIssue created: ${fullIssue.key}`);
+          Logger.info(`Summary: ${fullIssue.fields.summary}`);
+          Logger.info(`Type: ${fullIssue.fields.issuetype?.name}`);
+          Logger.info(`Status: ${fullIssue.fields.status?.name}`);
+          Logger.info(`URL: https://${config.host}/browse/${fullIssue.key}`);
         }
       } catch (error) {
         ErrorHandler.handle(error);

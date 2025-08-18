@@ -1,6 +1,9 @@
-// Re-export from new config manager for backward compatibility
+// Re-export from config-manager for backward compatibility
 export { 
-  ConfigManager,
+  ConfigManager 
+} from './config-manager.js';
+
+export type { 
   GlobalConfig,
   ProjectConfig,
   JiraFullConfig as JiraConfig 
