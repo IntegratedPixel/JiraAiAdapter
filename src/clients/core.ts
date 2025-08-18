@@ -7,15 +7,10 @@ import {
   JiraCreateIssue,
   JiraCreateMeta,
   JiraComment,
+  JiraUser,
 } from '../types/jira.js';
 import { ADFBuilder } from '../utils/adf.js';
 
-export interface JiraUser {
-  accountId: string;
-  emailAddress: string;
-  displayName: string;
-  self: string;
-}
 
 export interface JiraProject {
   id: string;

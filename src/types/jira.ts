@@ -60,7 +60,7 @@ export interface JiraPriority {
 export interface JiraUser {
   self: string;
   accountId: string;
-  emailAddress?: string;
+  emailAddress: string;
   displayName: string;
   active: boolean;
 }

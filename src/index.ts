@@ -2,6 +2,7 @@
 
 import { Command } from 'commander';
 import { createAuthCommand } from './commands/auth.js';
+import { createInitCommand } from './commands/init.js';
 import { createListCommand } from './commands/list.js';
 import { createViewCommand } from './commands/view.js';
 import { createCreateCommand } from './commands/create.js';
@@ -9,7 +10,7 @@ import { Logger } from './utils/logger.js';
 import { ErrorHandler } from './utils/error-handler.js';
 import { ConfigManager } from './config/jira.js';
 // Version will be injected during build
-const VERSION = '0.2.0';
+const VERSION = '0.4.0';
 
 const program = new Command();
 
@@ -29,6 +30,7 @@ program
 
 // Add commands
 program.addCommand(createAuthCommand());
+program.addCommand(createInitCommand());
 program.addCommand(createListCommand());
 program.addCommand(createViewCommand());
 program.addCommand(createCreateCommand());
