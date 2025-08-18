@@ -31,12 +31,12 @@ interface Template {
 
 export function createCreateCommand(): Command {
   const create = new Command('create')
-    .description('Create a new issue')
+    .description('Create a new issue (some fields may not be available depending on project configuration)')
     .option('-t, --type <type>', 'Issue type (Bug, Story, Task, etc.)')
     .option('-s, --summary <summary>', 'Issue summary')
     .option('-d, --description <description>', 'Issue description')
     .option('--description-file <file>', 'Read description from file')
-    .option('-p, --priority <priority>', 'Priority (Highest, High, Medium, Low, Lowest)')
+    .option('-p, --priority <priority>', 'Priority - if available in project (Highest, High, Medium, Low, Lowest)')
     .option('-l, --labels <labels>', 'Comma-separated labels')
     .option('-c, --components <components>', 'Comma-separated components')
     .option('-a, --assignee <assignee>', 'Assignee email or username')
