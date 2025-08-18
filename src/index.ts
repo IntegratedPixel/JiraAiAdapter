@@ -6,9 +6,23 @@ import { createInitCommand } from './commands/init.js';
 import { createListCommand } from './commands/list.js';
 import { createViewCommand } from './commands/view.js';
 import { createCreateCommand } from './commands/create.js';
+import { createDeleteCommand } from './commands/delete.js';
+import { createBatchCommand } from './commands/batch.js';
 import { Logger } from './utils/logger.js';
 import { ErrorHandler } from './utils/error-handler.js';
 import { ConfigManager } from './config/jira.js';
+
+// Export for programmatic usage
+export { CoreClient } from './clients/core.js';
+export { ConfigManager } from './config/jira.js';
+export { Logger } from './utils/logger.js';
+export { ErrorHandler } from './utils/error-handler.js';
+export { ADFBuilder } from './utils/adf.js';
+export { MarkdownParser } from './utils/markdown-parser.js';
+export type { ParsedIssue } from './utils/markdown-parser.js';
+export type { JiraConfig, GlobalConfig, ProjectConfig } from './config/jira.js';
+export type { JiraIssue, JiraUser, JiraComment } from './types/jira.js';
+
 // Version will be injected during build
 const VERSION = '0.4.0';
 
@@ -34,6 +48,8 @@ program.addCommand(createInitCommand());
 program.addCommand(createListCommand());
 program.addCommand(createViewCommand());
 program.addCommand(createCreateCommand());
+program.addCommand(createDeleteCommand());
+program.addCommand(createBatchCommand());
 
 // Add help command that shows configuration status
 program

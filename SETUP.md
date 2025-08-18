@@ -231,14 +231,24 @@ Build a lightweight Node.js CLI tool that:
    - `link <from> <to> --type "relates to"` - create issue links
    - `watch <issueKey>` - watch/unwatch issues
 
-### Phase 4: AI Assistant Features (2 hours)
+### Phase 4: AI Assistant Features (COMPLETED)
 1. **Batch Operations**
    ```bash
-   npm run jira batch <jsonFile>
+   npm run jira batch create <file>
    ```
-   - Create multiple tickets from JSON
-   - Update multiple tickets
-   - Generate from code TODOs
+   - Create multiple tickets from JSON or Markdown files
+   - Interactive review mode with `--interactive`
+   - Dry-run preview with `--dry-run`
+   - Support for default labels and assignee
+   - Output results to file with `--output`
+   
+   ```bash
+   npm run jira batch parse <markdown-file>
+   ```
+   - Parse markdown files to extract potential issues
+   - Recognizes TODOs, checkboxes, bug/feature markers
+   - Extracts priorities, labels, and components
+   - Preview in table or JSON format
 
 2. **Context Generation**
    ```bash
@@ -301,6 +311,15 @@ npm run jira create -- --type Bug --title "FPS drops to 4" --description "After 
 # Update ticket status
 npm run jira update -- PROJ-123 --status "In Progress" --comment "Starting implementation"
 
+# Parse markdown file for issues
+npm run jira batch parse TODO.md --output issues.json
+
+# Create issues from markdown with preview
+npm run jira batch create TODO.md --dry-run
+
+# Batch create with additional labels
+npm run jira batch create tasks.json --labels "sprint-42,backend" --assignee "dev@example.com"
+
 # Get context for current work
 npm run jira context -- --sprint current --format markdown
 ```
@@ -331,6 +350,32 @@ npm run jira view PROJ-123 --comments
 # Bulk update from release
 npm run jira batch release-1.0.json
 ```
+
+### Markdown Format Example
+```markdown
+## Tasks for Sprint 42
+
+### Backend
+- [ ] Implement user authentication API #backend #security HIGH
+- [ ] Add rate limiting to API endpoints #backend P1
+- [ ] TODO: Optimize database queries for performance
+
+### Frontend  
+- [ ] BUG: Fix login form validation 🐛
+- [ ] FEATURE: Add dark mode toggle ✨
+- [ ] Update dashboard components [ui] [dashboard]
+
+### Documentation
+- [ ] Document API endpoints #documentation
+- [ ] Create user guide for new features
+```
+
+The batch parser will extract:
+- Checkboxes as tasks
+- BUG/FEATURE markers for issue types
+- Hashtags and [brackets] as labels
+- Priority indicators (HIGH, P1, etc.)
+- Section headers for context
 
 ## Testing Strategy
 
