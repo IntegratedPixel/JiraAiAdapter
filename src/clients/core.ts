@@ -315,4 +315,13 @@ export class CoreClient extends BaseClient {
     
     return this.request<JiraCreateMeta>(`rest/api/3/issue/createmeta?${params.toString()}`);
   }
+
+  /**
+   * Delete an issue
+   */
+  async deleteIssue(issueKey: string): Promise<void> {
+    await this.request<void>(`rest/api/3/issue/${issueKey}`, {
+      method: 'DELETE',
+    });
+  }
 }
