@@ -347,6 +347,41 @@ export class CoreClient extends BaseClient {
   }
 
   /**
+   * Get available issue types for a project
+   */
+  async getProjectIssueTypes(projectKey: string): Promise<any[]> {
+    try {
+      // First try the create metadata endpoint
+      const params = new URLSearchParams();
+      params.append('projectKeys', projectKey);
+      params.append('expand', 'projects.issuetypes');
+      
+      const createMeta = await this.request<any>(
+        `rest/api/3/issue/createmeta?${params.toString()}`
+      );
+      
+      if (createMeta.projects && createMeta.projects[0]) {
+        return createMeta.projects[0].issuetypes || [];
+      }
+      
+      // Fallback to project endpoint
+      const project = await this.request<any>(`rest/api/3/project/${projectKey}`);
+      return project.issueTypes || [];
+      
+    } catch (error: any) {
+      Logger.debug('Failed to fetch issue types:', error);
+      
+      // Last fallback - try to get from project details
+      try {
+        const project = await this.getProject(projectKey);
+        return (project as any).issueTypes || [];
+      } catch {
+        return [];
+      }
+    }
+  }
+
+  /**
    * Delete an issue
    */
   async deleteIssue(issueKey: string): Promise<void> {

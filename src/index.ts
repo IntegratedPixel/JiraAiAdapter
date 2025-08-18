@@ -9,6 +9,7 @@ import { createCreateCommand } from './commands/create.js';
 import { createUpdateCommand } from './commands/update.js';
 import { createDeleteCommand } from './commands/delete.js';
 import { createBatchCommand } from './commands/batch.js';
+import { createTypesCommand } from './commands/types.js';
 import { Logger } from './utils/logger.js';
 import { ErrorHandler } from './utils/error-handler.js';
 import { ConfigManager } from './config/jira.js';
@@ -52,6 +53,7 @@ program.addCommand(createCreateCommand());
 program.addCommand(createUpdateCommand());
 program.addCommand(createDeleteCommand());
 program.addCommand(createBatchCommand());
+program.addCommand(createTypesCommand());
 
 // Add help command that shows configuration status
 program

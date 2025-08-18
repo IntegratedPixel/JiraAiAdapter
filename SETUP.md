@@ -302,13 +302,16 @@ Build a lightweight Node.js CLI tool that:
 
 ### For AI Assistants
 ```bash
+# List available issue types for the project
+npm run jira types
+
 # List current sprint tickets
 npm run jira list -- --sprint current
 
 # Create a bug ticket
 npm run jira create -- --type Bug --title "FPS drops to 4" --description "After implementing..."
 
-# Create a sub-task under a parent issue
+# Create a sub-task under a parent issue (check types command for exact name)
 npm run jira create -- --type Sub-task --summary "Implement validation logic" --parent CV-13
 
 # Convert existing issue to sub-task
