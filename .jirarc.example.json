@@ -1,0 +1,8 @@
+{
+  "project": "PROJ",
+  "board": "Project Board",
+  "defaultIssueType": "Task",
+  "defaultAssignee": "me",
+  "defaultLabels": ["project-name"],
+  "defaultPriority": "Medium"
+}
