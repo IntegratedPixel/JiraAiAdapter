@@ -58,7 +58,7 @@ export class ErrorHandler {
       } else if (status === 404) {
         code = ErrorCode.NOT_FOUND;
         exitCode = EXIT_CODES.NOT_FOUND;
-        message = 'Resource not found.';
+        message = 'Issue does not exist or you do not have permission to see it.';
       } else if (status === 429) {
         code = ErrorCode.RATE_LIMIT;
         exitCode = EXIT_CODES.RATE_LIMIT;

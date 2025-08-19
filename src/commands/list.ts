@@ -14,6 +14,7 @@ export function createListCommand(): Command {
     .option('-t, --type <type>', 'Filter by issue type')
     .option('-p, --priority <priority>', 'Filter by priority')
     .option('-l, --labels <labels>', 'Filter by labels (comma-separated)')
+    .option('--project <key>', 'Filter by project (overrides default project)')
     .option('--sprint <sprint>', 'Filter by sprint (current, next, or sprint name)')
     .option('--limit <number>', 'Maximum number of issues to return', '20')
     .option('--page <number>', 'Page number (for pagination)', '0')
@@ -35,8 +36,11 @@ export function createListCommand(): Command {
           jql = JQLSanitizer.validateJQL(options.jql);
         } else {
           // Build JQL from options with proper sanitization
-          const projectKey = JQLSanitizer.sanitizeProjectKey(config.project);
-          jqlParts.push(`project = ${projectKey}`);
+          const projectKey = options.project || config.project;
+          if (projectKey) {
+            // Project keys need to be quoted in JQL
+            jqlParts.push(`project = "${JQLSanitizer.sanitizeProjectKey(projectKey)}"`);
+          }
 
           if (options.status) {
             jqlParts.push(`status = ${JQLSanitizer.sanitizeFieldValue(options.status)}`);
@@ -80,7 +84,13 @@ export function createListCommand(): Command {
             }
           }
 
-          jql = jqlParts.join(' AND ') + ' ORDER BY updated DESC';
+          // Only add ORDER BY if we have some query parts
+          if (jqlParts.length > 0) {
+            jql = jqlParts.join(' AND ') + ' ORDER BY updated DESC';
+          } else {
+            // Default query if no filters provided
+            jql = 'ORDER BY updated DESC';
+          }
         }
 
         Logger.debug('JQL Query', { jql });

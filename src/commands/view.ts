@@ -34,7 +34,29 @@ export function createViewCommand(): Command {
           expand.push('changelog');
         }
 
-        const issue = await client.getIssue(issueKey, expand);
+        let issue;
+        try {
+          issue = await client.getIssue(issueKey, expand);
+        } catch (error: any) {
+          // Provide more helpful error message for 404s
+          if (error.response?.statusCode === 404) {
+            Logger.stopSpinner(false);
+            const url = `https://${config.host}/browse/${issueKey}`;
+            
+            if (Logger.isJsonMode()) {
+              ErrorHandler.handle(error);
+            } else {
+              Logger.error(`Issue ${issueKey} not found or you don't have permission to view it.`);
+              Logger.info(`\nPossible reasons:`);
+              Logger.info(`- The issue key might be incorrect`);
+              Logger.info(`- The issue might have been deleted`);
+              Logger.info(`- You might not have permission to view issues in this project`);
+              Logger.info(`\nYou can try visiting the URL directly: ${url}`);
+              process.exit(4);
+            }
+          }
+          throw error;
+        }
         
         Logger.stopSpinner(true);
 
