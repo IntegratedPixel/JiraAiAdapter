@@ -65,7 +65,8 @@ export class ConfigManager {
         this.globalConfig = {
           host: config.host,
           email: config.email,
-          // Note: apiToken should be in keychain, not in file
+          // Load apiToken from file if present (fallback when keychain not available)
+          apiToken: config.apiToken,
         };
       }
     } catch (error) {
@@ -88,6 +89,18 @@ export class ConfigManager {
         defaultLabels: config.defaultLabels,
         defaultPriority: config.defaultPriority,
       };
+      
+      // Also load global settings from project config if not already set
+      // This allows project-specific .jirarc.json to contain full config
+      if (config.host && !this.globalConfig.host) {
+        this.globalConfig.host = config.host;
+      }
+      if (config.email && !this.globalConfig.email) {
+        this.globalConfig.email = config.email;
+      }
+      if (config.apiToken && !this.globalConfig.apiToken) {
+        this.globalConfig.apiToken = config.apiToken;
+      }
     }
   }
 
