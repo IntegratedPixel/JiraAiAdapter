@@ -8,13 +8,14 @@ import { JQLSanitizer } from '../utils/jql-sanitizer.js';
 
 export function createListCommand(): Command {
   const list = new Command('list')
-    .description('List Jira issues')
+    .description('Search and list Jira issues with powerful filtering options including status, assignee, type, Epic, labels, and custom JQL queries. Supports pagination and table/JSON output.')
     .option('-s, --status <status>', 'Filter by status')
     .option('-a, --assignee <assignee>', 'Filter by assignee (use "me" for yourself)')
     .option('-t, --type <type>', 'Filter by issue type')
     .option('-p, --priority <priority>', 'Filter by priority')
     .option('-l, --labels <labels>', 'Filter by labels (comma-separated)')
     .option('--project <key>', 'Filter by project (overrides default project)')
+    .option('--board <name>', 'Specify board name (overrides default board)')
     .option('--sprint <sprint>', 'Filter by sprint (current, next, or sprint name)')
     .option('--limit <number>', 'Maximum number of issues to return', '20')
     .option('--page <number>', 'Page number (for pagination)', '0')
@@ -24,7 +25,12 @@ export function createListCommand(): Command {
     .action(async (options) => {
       try {
         const configManager = new ConfigManager();
-        const config = await configManager.getConfig();
+        // Apply command-line project overrides
+        const configOverrides = {
+          project: options.project,
+          board: options.board,
+        };
+        const config = await configManager.getConfig(configOverrides);
         const client = new CoreClient(config);
 
         // Build JQL query
@@ -37,10 +43,12 @@ export function createListCommand(): Command {
         } else {
           // Build JQL from options with proper sanitization
           const projectKey = options.project || config.project;
-          if (projectKey) {
-            // Project keys need to be quoted in JQL
-            jqlParts.push(`project = "${JQLSanitizer.sanitizeProjectKey(projectKey)}"`);
+          if (!projectKey) {
+            throw new Error('Project key is required. Set it via JIRA_PROJECT environment variable, .jirarc.json file, or use --project flag.');
           }
+          
+          // Project keys need to be quoted in JQL
+          jqlParts.push(`project = "${JQLSanitizer.sanitizeProjectKey(projectKey)}"`);
 
           if (options.status) {
             jqlParts.push(`status = ${JQLSanitizer.sanitizeFieldValue(options.status)}`);

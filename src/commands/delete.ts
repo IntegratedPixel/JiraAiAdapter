@@ -10,11 +10,18 @@ export function createDeleteCommand(): Command {
     .description('Delete a Jira issue')
     .argument('<issueKey>', 'Issue key to delete (e.g., PROJ-123)')
     .option('-f, --force', 'Skip confirmation prompt')
+    .option('--project <key>', 'Specify project context (overrides default)')
+    .option('--board <name>', 'Specify board name (overrides default board)')
     .action(async (issueKey, options) => {
       try {
         const configManager = new ConfigManager();
         await configManager.loadTokenFromKeychain();
-        const config = await configManager.getConfig();
+        // Apply command-line project overrides
+        const configOverrides = {
+          project: options.project,
+          board: options.board,
+        };
+        const config = await configManager.getConfig(configOverrides);
         const client = new CoreClient(config);
 
         // Get issue details first to show what we're deleting
@@ -30,7 +37,7 @@ export function createDeleteCommand(): Command {
         const skipConfirmation = options.force || process.env.JIRA_CLI_YES_MODE === 'true';
         
         if (!skipConfirmation) {
-          Logger.info(`\nAbout to delete:`);
+          Logger.info('\nAbout to delete:');
           Logger.info(`  Key: ${issue.key}`);
           Logger.info(`  Summary: ${issue.fields.summary}`);
           Logger.info(`  Type: ${issue.fields.issuetype.name}`);

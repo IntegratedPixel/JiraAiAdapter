@@ -31,22 +31,31 @@ interface Template {
 
 export function createCreateCommand(): Command {
   const create = new Command('create')
-    .description('Create a new issue (some fields may not be available depending on project configuration)')
+    .description('Create a new Jira issue with support for all common fields including Epic linking, story points, labels, components, and subtasks. Use templates for standardized issue creation.')
     .option('-t, --type <type>', 'Issue type (Bug, Story, Task, etc.)')
     .option('-s, --summary <summary>', 'Issue summary')
     .option('-d, --description <description>', 'Issue description')
     .option('--description-file <file>', 'Read description from file')
     .option('-p, --priority <priority>', 'Priority - if available in project (Highest, High, Medium, Low, Lowest)')
+    .option('--story-points <number>', 'Story points (numeric value)')
     .option('-l, --labels <labels>', 'Comma-separated labels')
     .option('-c, --components <components>', 'Comma-separated components')
     .option('-a, --assignee <assignee>', 'Assignee email or username')
     .option('--parent <issueKey>', 'Parent issue key (required for Sub-task type)')
-    .option('--template <template>', 'Use template (bug, feature, task)')
-    .option('--dry-run', 'Preview the issue without creating it')
+    .option('--epic <epicKey>', 'Link to Epic by issue key (e.g., PROJ-123). Creates parent-child relationship for Agile workflows.')
+    .option('--project <key>', 'Create in specific project (overrides default)')
+    .option('--board <name>', 'Specify board name (overrides default board)')
+    .option('--template <template>', 'Use pre-defined template: bug, feature, or task for standardized issue creation')
+    .option('--dry-run', 'Preview the issue without creating it - shows what would be created')
     .action(async (options) => {
       try {
         const configManager = new ConfigManager();
-        const config = await configManager.getConfig();
+        // Apply command-line project overrides
+        const configOverrides = {
+          project: options.project,
+          board: options.board,
+        };
+        const config = await configManager.getConfig(configOverrides);
         const client = new CoreClient(config);
 
         let issueData: any = {};
@@ -99,6 +108,14 @@ export function createCreateCommand(): Command {
         if (options.summary) issueData.summary = options.summary;
         if (options.priority) issueData.priority = options.priority;
 
+        if (options.storyPoints !== undefined) {
+          const storyPoints = parseFloat(options.storyPoints);
+          if (isNaN(storyPoints) || storyPoints < 0) {
+            throw new Error('Story points must be a non-negative number');
+          }
+          issueData.storyPoints = storyPoints;
+        }
+
         if (options.description) {
           issueData.description = options.description;
         } else if (options.descriptionFile) {
@@ -129,8 +146,25 @@ export function createCreateCommand(): Command {
           }
         }
 
-        // Interactive mode if missing required fields
-        if (!issueData.summary || !issueData.issueType) {
+        if (options.epic) {
+          issueData.epic = options.epic;
+        }
+
+        // Check if any non-interactive options were provided
+        const hasCommandLineArgs = options.type || options.summary || options.description || 
+                                   options.descriptionFile || options.priority || options.labels || 
+                                   options.components || options.assignee || options.storyPoints;
+        
+        // If command line args provided but missing required fields, error out instead of going interactive
+        if (hasCommandLineArgs && (!issueData.summary || !issueData.issueType)) {
+          const missing = [];
+          if (!issueData.summary) missing.push('summary');
+          if (!issueData.issueType) missing.push('type');
+          throw new Error(`Missing required fields: ${missing.join(', ')}. Use --summary and --type, or run without arguments for interactive mode.`);
+        }
+        
+        // Interactive mode if missing required fields AND no command line args provided
+        if ((!issueData.summary || !issueData.issueType) && !hasCommandLineArgs && !options.template) {
           const answers = await inquirer.prompt([
             {
               type: 'input',
@@ -180,6 +214,31 @@ export function createCreateCommand(): Command {
           return;
         }
 
+        // Validate issue type against project's available types
+        if (issueData.issueType) {
+          Logger.startSpinner('Validating issue type...');
+          try {
+            const availableTypes = await client.getProjectIssueTypes(config.project);
+            const validType = availableTypes.find(type => 
+              type.name.toLowerCase() === issueData.issueType.toLowerCase()
+            );
+            
+            if (!validType) {
+              Logger.stopSpinner(false);
+              const typeNames = availableTypes.map(type => type.name).sort();
+              throw new Error(
+                `Invalid issue type "${issueData.issueType}" for project ${config.project}.\n` +
+                `Available types: ${typeNames.join(', ')}\n` +
+                `\nTip: Use 'jira types' to see all available issue types for this project.`
+              );
+            }
+            Logger.stopSpinner(true);
+          } catch (validationError: any) {
+            Logger.stopSpinner(false);
+            throw validationError;
+          }
+        }
+
         // Create the issue
         Logger.startSpinner('Creating issue...');
 
@@ -188,10 +247,12 @@ export function createCreateCommand(): Command {
           description: issueData.description,
           issueType: issueData.issueType,
           priority: issueData.priority,
+          storyPoints: issueData.storyPoints,
           labels: issueData.labels,
           components: issueData.components,
           assignee: issueData.assignee,
           parent: issueData.parent,
+          epic: issueData.epic,
         });
 
         Logger.stopSpinner(true, `Issue ${createdIssue.key} created successfully!`);

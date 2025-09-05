@@ -1,6 +1,6 @@
 {
   "name": "@integratedpixel/jira-ai-cli",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "AI-friendly Jira CLI tool for command-line interaction with Jira",
   "main": "dist/index.js",
   "type": "module",
@@ -11,7 +11,8 @@
     "dist",
     "src/templates",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    ".env.example"
   ],
   "publishConfig": {
     "access": "public"
@@ -54,6 +55,7 @@
     "cli-table3": "^0.6.5",
     "commander": "^12.1.0",
     "cosmiconfig": "^9.0.0",
+    "csv-parse": "^6.1.0",
     "dotenv": "^16.4.7",
     "got": "^14.4.5",
     "inquirer": "^12.3.0",
@@ -61,17 +63,18 @@
     "ora": "^8.1.1"
   },
   "devDependencies": {
+    "@types/csv-parse": "^1.1.12",
     "@types/inquirer": "^9.0.9",
     "@types/node": "^22.10.5",
     "@typescript-eslint/eslint-plugin": "^8.19.0",
     "@typescript-eslint/parser": "^8.19.0",
-    "@vitest/coverage-v8": "^2.1.8",
+    "@vitest/coverage-v8": "^3.2.4",
     "electron-rebuild": "^3.2.9",
     "eslint": "^9.18.0",
     "nock": "^13.5.6",
     "prettier": "^3.4.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
-    "vitest": "^2.1.8"
+    "vitest": "^3.2.4"
   }
 }

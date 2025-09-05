@@ -13,8 +13,8 @@ export class Formatter {
     }
 
     const table = new Table({
-      head: ['Key', 'Type', 'Status', 'Priority', 'Summary', 'Assignee'],
-      colWidths: [12, 10, 15, 10, 40, 20],
+      head: ['Key', 'Type', 'Status', 'Priority', 'Points', 'Summary', 'Assignee'],
+      colWidths: [12, 10, 15, 10, 8, 35, 18],
       wordWrap: true,
       style: {
         head: ['cyan'],
@@ -29,7 +29,8 @@ export class Formatter {
         fields.issuetype?.name || '-',
         this.formatStatus(fields.status),
         this.formatPriority(fields.priority),
-        this.truncate(fields.summary, 38),
+        this.formatStoryPoints(fields),
+        this.truncate(fields.summary, 33),
         fields.assignee?.displayName || 'Unassigned',
       ]);
     }
@@ -50,8 +51,21 @@ export class Formatter {
     lines.push(`${chalk.bold('Type:')} ${fields.issuetype?.name || '-'}`);
     lines.push(`${chalk.bold('Status:')} ${this.formatStatus(fields.status)}`);
     lines.push(`${chalk.bold('Priority:')} ${this.formatPriority(fields.priority)}`);
+    
+    const storyPoints = this.getStoryPoints(fields);
+    if (storyPoints !== null) {
+      lines.push(`${chalk.bold('Story Points:')} ${storyPoints}`);
+    }
+    
     lines.push(`${chalk.bold('Reporter:')} ${fields.reporter?.displayName || '-'}`);
     lines.push(`${chalk.bold('Assignee:')} ${fields.assignee?.displayName || 'Unassigned'}`);
+    
+    // Show parent/epic information
+    if (fields.parent) {
+      const parentSummary = fields.parent.fields?.summary || fields.parent.key;
+      const parentType = fields.parent.fields?.issuetype?.name || 'Issue';
+      lines.push(`${chalk.bold('Parent:')} ${fields.parent.key} (${parentType}) - ${parentSummary}`);
+    }
     
     if (fields.labels && fields.labels.length > 0) {
       lines.push(`${chalk.bold('Labels:')} ${fields.labels.join(', ')}`);
@@ -212,6 +226,7 @@ export class Formatter {
         status: item.fields.status?.name,
         type: item.fields.issuetype?.name,
         priority: item.fields.priority?.name,
+        storyPoints: this.getStoryPoints(item.fields),
         assignee: item.fields.assignee?.displayName,
         reporter: item.fields.reporter?.displayName,
         created: item.fields.created,
@@ -223,5 +238,56 @@ export class Formatter {
     }
     
     return item;
+  }
+
+  /**
+   * Get story points from issue fields
+   */
+  private static getStoryPoints(fields: any): number | null {
+    // Story points can be in various custom fields, commonly:
+    // - customfield_10016 (common default)
+    // - customfield_10002 
+    // - story_point_estimate
+    // We'll check common ones and return the first found
+    const storyPointFields = [
+      'customfield_10016',
+      'customfield_10002', 
+      'customfield_10004',
+      'customfield_10008',
+      'story_point_estimate',
+      'storyPoints'
+    ];
+
+    for (const field of storyPointFields) {
+      if (fields[field] !== undefined && fields[field] !== null) {
+        const value = parseFloat(fields[field]);
+        if (!isNaN(value)) {
+          return value;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Format story points for table display
+   */
+  private static formatStoryPoints(fields: any): string {
+    const points = this.getStoryPoints(fields);
+    if (points === null) {
+      return '-';
+    }
+    
+    // Color code based on size (typical Fibonacci scale)
+    if (points <= 1) {
+      return chalk.green(points.toString());
+    } else if (points <= 3) {
+      return chalk.blue(points.toString());
+    } else if (points <= 8) {
+      return chalk.yellow(points.toString());
+    } else {
+      return chalk.red(points.toString());
+    }
   }
 }

@@ -9,6 +9,7 @@ export interface ParsedIssue {
   components?: string[];
   assignee?: string;
   parent?: string;
+  storyPoints?: number;
   originalText?: string;
 }
 

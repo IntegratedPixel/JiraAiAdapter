@@ -10,6 +10,9 @@ import { createUpdateCommand } from './commands/update.js';
 import { createDeleteCommand } from './commands/delete.js';
 import { createBatchCommand } from './commands/batch.js';
 import { createTypesCommand } from './commands/types.js';
+import { createCommentCommand } from './commands/comment.js';
+import { createTransitionCommand } from './commands/transition.js';
+import { createLinkCommand } from './commands/link.js';
 import { Logger } from './utils/logger.js';
 import { ErrorHandler } from './utils/error-handler.js';
 import { ConfigManager } from './config/jira.js';
@@ -26,13 +29,13 @@ export type { JiraConfig, GlobalConfig, ProjectConfig } from './config/jira.js';
 export type { JiraIssue, JiraUser, JiraComment } from './types/jira.js';
 
 // Version will be injected during build
-const VERSION = '0.4.0';
+const VERSION = '0.4.1';
 
 const program = new Command();
 
 program
   .name('jira')
-  .description('AI-friendly Jira CLI tool for command-line interaction with Jira')
+  .description('AI-friendly Jira CLI for creating, updating, viewing, and managing Jira issues. Supports Epic linking, batch operations, issue transitions, comments, and more. Designed for both interactive use and CI/CD automation.')
   .version(VERSION)
   .option('-d, --debug', 'Enable debug mode')
   .option('-q, --quiet', 'Suppress non-error output')
@@ -56,6 +59,9 @@ program.addCommand(createViewCommand());
 program.addCommand(createCreateCommand());
 program.addCommand(createUpdateCommand());
 program.addCommand(createDeleteCommand());
+program.addCommand(createCommentCommand());
+program.addCommand(createTransitionCommand());
+program.addCommand(createLinkCommand());
 program.addCommand(createBatchCommand());
 program.addCommand(createTypesCommand());
 
@@ -63,25 +69,60 @@ program.addCommand(createTypesCommand());
 program
   .command('status')
   .description('Show configuration status')
-  .action(async () => {
+  .option('--verbose', 'Show detailed configuration sources')
+  .action(async (options) => {
     try {
       const configManager = new ConfigManager();
       const config = configManager.getPartialConfig();
+      const status = configManager.getConfigStatus();
       
       Logger.info('Configuration Status:');
-      Logger.info(`  Host: ${config.host || 'Not configured'}`);
-      Logger.info(`  Email: ${config.email || 'Not configured'}`);
-      Logger.info(`  API Token: ${config.apiToken ? '***' : 'Not configured'}`);
-      Logger.info(`  Project: ${config.project || 'Not configured'}`);
+      Logger.info(`  Host: ${config.host || 'Not configured'} ${options.verbose ? `(${status.sources.host})` : ''}`);
+      Logger.info(`  Email: ${config.email || 'Not configured'} ${options.verbose ? `(${status.sources.email})` : ''}`);
+      Logger.info(`  API Token: ${config.apiToken ? '***' : 'Not configured'} ${options.verbose ? `(${status.sources.apiToken})` : ''}`);
+      Logger.info(`  Project: ${config.project || 'Not configured'} ${options.verbose ? `(${status.sources.project})` : ''}`);
       Logger.info(`  Board: ${config.board || 'Not configured'}`);
       
+      // Show environment variable detection
+      if (status.envVarsDetected.length > 0) {
+        Logger.info(`\nEnvironment variables detected: ${status.envVarsDetected.join(', ')}`);
+      }
+      
       if (await configManager.isConfigured()) {
-        Logger.success('\nConfiguration is complete!');
+        Logger.success('\n✅ Configuration is complete!');
+        if (configManager.isConfiguredViaEnvironment()) {
+          Logger.info('🚀 Running in environment variable mode (perfect for CI/CD)');
+        }
       } else {
         const errors = configManager.validate();
-        Logger.warning('\nConfiguration incomplete:');
-        errors.forEach(error => Logger.error(error));
-        Logger.info('\nRun "jira auth set" to configure');
+        Logger.warning('\n⚠️  Configuration incomplete:');
+        errors.forEach(error => Logger.error(`  • ${error}`));
+        
+        // Provide contextual setup instructions
+        Logger.info('\n📋 Setup Options:');
+        
+        if (status.envVarsDetected.length > 0) {
+          Logger.info('  1. Complete environment variables:');
+          const missing = [];
+          if (!process.env.JIRA_HOST) missing.push('JIRA_HOST');
+          if (!process.env.JIRA_EMAIL) missing.push('JIRA_EMAIL');
+          if (!process.env.JIRA_TOKEN && !process.env.JIRA_API_TOKEN) missing.push('JIRA_TOKEN');
+          if (!process.env.JIRA_PROJECT) missing.push('JIRA_PROJECT');
+          
+          if (missing.length > 0) {
+            Logger.info(`     Missing: export ${missing.join(', ')}`);
+          }
+        } else {
+          Logger.info('  1. Environment variables (enterprise/CI-friendly):');
+          Logger.info('     export JIRA_HOST=company.atlassian.net');
+          Logger.info('     export JIRA_EMAIL=user@company.com');
+          Logger.info('     export JIRA_TOKEN=your_api_token');
+          Logger.info('     export JIRA_PROJECT=PROJ');
+        }
+        
+        Logger.info('  2. Interactive setup:');
+        Logger.info('     jira auth set && jira init');
+        Logger.info('  3. Copy .env.example to .env and customize');
       }
     } catch (error) {
       ErrorHandler.handle(error);

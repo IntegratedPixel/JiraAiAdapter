@@ -44,7 +44,7 @@ export class ErrorHandler {
     let code: ErrorCode = ErrorCode.UNKNOWN;
     let exitCode: number = EXIT_CODES.UNKNOWN_ERROR;
     let message: string = 'An unexpected error occurred';
-    let details: any = {};
+    const details: any = {};
 
     if (error.response) {
       // HTTP error response

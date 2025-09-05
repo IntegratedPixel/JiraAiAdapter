@@ -9,14 +9,23 @@ export function createTypesCommand(): Command {
   const types = new Command('types')
     .description('List available issue types for the current project')
     .option('-p, --project <key>', 'Project key (defaults to configured project)')
+    .option('--board <name>', 'Specify board name (overrides default board)')
     .option('--all', 'Show all fields including IDs and descriptions')
     .action(async (options) => {
       try {
         const configManager = new ConfigManager();
-        const config = await configManager.getConfig();
+        // Apply command-line project overrides
+        const configOverrides = {
+          project: options.project,
+          board: options.board,
+        };
+        const config = await configManager.getConfig(configOverrides);
         const client = new CoreClient(config);
 
         const projectKey = options.project || config.project;
+        if (!projectKey) {
+          throw new Error('Project key is required. Set it via JIRA_PROJECT environment variable, .jirarc.json file, or use --project flag.');
+        }
         
         Logger.startSpinner(`Fetching issue types for project ${projectKey}...`);
 

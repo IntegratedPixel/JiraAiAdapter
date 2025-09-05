@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { readFileSync, existsSync } from 'fs';
 import { ConfigManager } from '../config/jira.js';
 import { CoreClient } from '../clients/core.js';
 import { Logger } from '../utils/logger.js';
@@ -6,22 +7,32 @@ import { ErrorHandler } from '../utils/error-handler.js';
 
 export function createUpdateCommand(): Command {
   const update = new Command('update')
-    .description('Update an existing issue')
+    .description('Update an existing Jira issue - modify any field including summary, description, priority, story points, Epic links, status transitions, labels, and assignee. Supports adding comments with updates.')
     .argument('<issueKey>', 'Issue key to update (e.g., PROJ-123)')
     .option('-s, --summary <summary>', 'New summary')
     .option('-d, --description <description>', 'New description')
+    .option('--description-file <file>', 'Read description from file')
     .option('-t, --type <type>', 'New issue type')
     .option('-p, --priority <priority>', 'New priority')
+    .option('--story-points <number>', 'Set story points (numeric value)')
     .option('--status <status>', 'Transition to new status')
     .option('-l, --labels <operation>', 'Update labels (add:label1,label2 or remove:label1,label2 or set:label1,label2)')
     .option('-a, --assignee <assignee>', 'New assignee (email or username, or "unassigned")')
     .option('--parent <issueKey>', 'Convert to sub-task of parent (requires type change to Sub-task)')
+    .option('--epic <epicKey>', 'Link to Epic by key (PROJ-123) or remove from Epic with "none". Updates Epic-Story relationship for Agile planning.')
+    .option('--project <key>', 'Specify project context (overrides default)')
+    .option('--board <name>', 'Specify board name (overrides default board)')
     .option('--comment <comment>', 'Add a comment with the update')
     .option('--dry-run', 'Preview the update without applying it')
     .action(async (issueKey, options) => {
       try {
         const configManager = new ConfigManager();
-        const config = await configManager.getConfig();
+        // Apply command-line project overrides  
+        const configOverrides = {
+          project: options.project,
+          board: options.board,
+        };
+        const config = await configManager.getConfig(configOverrides);
         const client = new CoreClient(config);
 
         // First, verify the issue exists
@@ -48,10 +59,25 @@ export function createUpdateCommand(): Command {
         if (options.description) {
           updateData.description = options.description;
           hasUpdates = true;
+        } else if (options.descriptionFile) {
+          if (!existsSync(options.descriptionFile)) {
+            throw new Error(`File not found: ${options.descriptionFile}`);
+          }
+          updateData.description = readFileSync(options.descriptionFile, 'utf-8');
+          hasUpdates = true;
         }
 
         if (options.priority) {
           updateData.priority = options.priority;
+          hasUpdates = true;
+        }
+
+        if (options.storyPoints !== undefined) {
+          const storyPoints = parseFloat(options.storyPoints);
+          if (isNaN(storyPoints) || storyPoints < 0) {
+            throw new Error('Story points must be a non-negative number');
+          }
+          updateData.storyPoints = storyPoints;
           hasUpdates = true;
         }
 
@@ -110,26 +136,61 @@ export function createUpdateCommand(): Command {
           }
         }
 
+        // Handle epic link change
+        if (options.epic !== undefined) {
+          if (options.epic === 'none' || options.epic === '') {
+            updateData.epic = null; // Remove from epic
+            Logger.info('Will remove issue from epic');
+          } else {
+            // Validate epic exists
+            try {
+              const epicIssue = await client.getIssue(options.epic);
+              
+              // Check if epic is actually an Epic type
+              if (!epicIssue.fields.issuetype?.name?.toLowerCase().includes('epic')) {
+                Logger.warning(`${options.epic} is not an Epic type, but will attempt to link anyway`);
+              }
+            } catch (error: any) {
+              if (error.response?.statusCode === 404) {
+                throw new Error(`Epic issue ${options.epic} not found. Please check the issue key.`);
+              }
+              throw new Error(`Failed to validate epic issue: ${error}`);
+            }
+            
+            updateData.epic = options.epic;
+            Logger.info(`Will link issue to epic ${options.epic}`);
+          }
+          hasUpdates = true;
+        }
+
         // Handle type change
         if (options.type) {
           updateData.issueType = options.type;
           hasUpdates = true;
         }
 
-        // Handle status transition
+        // Handle status transition (smart discovery)
         let transitionId: string | undefined;
         if (options.status) {
-          const transitions = await client.getTransitions(issueKey);
-          const transition = transitions.find(t => 
-            t.name.toLowerCase() === options.status.toLowerCase()
-          );
+          Logger.startSpinner(`Finding transition to status "${options.status}"...`);
           
-          if (!transition) {
-            const availableStatuses = transitions.map(t => t.name).join(', ');
-            throw new Error(`Status '${options.status}' not available. Available: ${availableStatuses}`);
+          const transitionInfo = await client.findTransitionToStatus(issueKey, options.status);
+          
+          if (transitionInfo) {
+            transitionId = transitionInfo.transitionId;
+            Logger.stopSpinner(true, `Found transition: "${transitionInfo.transitionName}"`);
+          } else {
+            Logger.stopSpinner(false);
+            
+            // Get available transitions to provide helpful error message
+            const transitions = await client.getTransitions(issueKey);
+            const availableStatuses = transitions.map(t => `"${t.to.name}" (via "${t.name}")`).join(', ');
+            
+            throw new Error(
+              `No transition available to status "${options.status}".\n` +
+              `Available transitions: ${availableStatuses}`
+            );
           }
-          
-          transitionId = transition.id;
         }
 
         if (!hasUpdates && !transitionId && !needsConversion) {
@@ -186,7 +247,7 @@ export function createUpdateCommand(): Command {
                 Logger.error('\n' + error.message);
                 
                 // Check if we can at least tell the user the current state
-                Logger.info(`\nCurrent issue details:`);
+                Logger.info('\nCurrent issue details:');
                 Logger.info(`- Key: ${currentIssue.key}`);
                 Logger.info(`- Type: ${currentIssue.fields.issuetype?.name}`);
                 Logger.info(`- Is Subtask: ${currentIssue.fields.issuetype?.subtask ? 'Yes' : 'No'}`);

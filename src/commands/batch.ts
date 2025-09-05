@@ -6,6 +6,7 @@ import { CoreClient } from '../clients/core.js';
 import { Logger } from '../utils/logger.js';
 import { ErrorHandler } from '../utils/error-handler.js';
 import { MarkdownParser, ParsedIssue } from '../utils/markdown-parser.js';
+import { CSVParser } from '../utils/csv-parser.js';
 import Table from 'cli-table3';
 
 export function createBatchCommand(): Command {
@@ -15,18 +16,25 @@ export function createBatchCommand(): Command {
   batch
     .command('create')
     .description('Create multiple issues from a file')
-    .argument('<file>', 'Input file (JSON or Markdown)')
+    .argument('<file>', 'Input file (JSON, CSV, or Markdown)')
     .option('--dry-run', 'Preview issues without creating them')
     .option('--interactive', 'Review and modify each issue before creation')
     .option('--output <file>', 'Save results to file')
     .option('--type <type>', 'Default issue type', 'Task')
     .option('--labels <labels>', 'Additional labels (comma-separated)')
     .option('--assignee <user>', 'Default assignee')
+    .option('--project <key>', 'Create in specific project (overrides default)')
+    .option('--board <name>', 'Specify board name (overrides default board)')
     .action(async (file, options) => {
       try {
         const configManager = new ConfigManager();
         await configManager.loadTokenFromKeychain();
-        const config = await configManager.getConfig();
+        // Apply command-line project overrides
+        const configOverrides = {
+          project: options.project,
+          board: options.board,
+        };
+        const config = await configManager.getConfig(configOverrides);
         const client = new CoreClient(config);
 
         // Parse input file
@@ -35,12 +43,15 @@ export function createBatchCommand(): Command {
         if (file.endsWith('.md') || file.endsWith('.markdown')) {
           Logger.info('Parsing markdown file...');
           issues = MarkdownParser.parseFile(file);
+        } else if (file.endsWith('.csv')) {
+          Logger.info('Parsing CSV file...');
+          issues = CSVParser.parseFile(file);
         } else if (file.endsWith('.json')) {
           Logger.info('Loading JSON file...');
           const content = readFileSync(file, 'utf-8');
           issues = JSON.parse(content);
         } else {
-          throw new Error('Unsupported file format. Use .md, .markdown, or .json');
+          throw new Error('Unsupported file format. Use .md, .markdown, .csv, or .json');
         }
 
         if (issues.length === 0) {
@@ -164,6 +175,32 @@ export function createBatchCommand(): Command {
           Logger.success(`\nParsed issues saved to ${options.output}`);
         }
 
+      } catch (error) {
+        ErrorHandler.handle(error);
+      }
+    });
+
+  batch
+    .command('template')
+    .description('Generate a CSV template file')
+    .option('--output <file>', 'Output file path', 'issues-template.csv')
+    .action(async (options) => {
+      try {
+        const template = CSVParser.generateTemplate();
+        writeFileSync(options.output, template);
+        Logger.success(`CSV template generated: ${options.output}`);
+        
+        Logger.info('\nTemplate includes these columns:');
+        Logger.info('- Summary (required)');
+        Logger.info('- Type (Bug, Story, Task, etc.)');
+        Logger.info('- Priority (Highest, High, Medium, Low, Lowest)');
+        Logger.info('- Description');
+        Logger.info('- Labels (comma or pipe separated)');
+        Logger.info('- Assignee (email or username)');
+        Logger.info('- Story Points (numeric value)');
+        Logger.info('- Components (comma or pipe separated)');
+        Logger.info('- Parent (for sub-tasks)');
+        
       } catch (error) {
         ErrorHandler.handle(error);
       }
@@ -295,6 +332,7 @@ async function createIssues(
         description: issue.description,
         issueType: issue.issueType,
         priority: issue.priority,
+        storyPoints: issue.storyPoints,
         labels: issue.labels,
         assignee: issue.assignee,
         parent: issue.parent,
@@ -325,9 +363,9 @@ async function createIssues(
  */
 function displayIssuesTable(issues: ParsedIssue[]): void {
   const table = new Table({
-    head: ['#', 'Summary', 'Type', 'Priority', 'Labels'],
+    head: ['#', 'Summary', 'Type', 'Priority', 'Points', 'Labels'],
     style: { head: ['cyan'] },
-    colWidths: [5, 50, 10, 10, 20],
+    colWidths: [5, 45, 10, 10, 8, 20],
     wordWrap: true,
   });
 
@@ -337,6 +375,7 @@ function displayIssuesTable(issues: ParsedIssue[]): void {
       issue.summary,
       issue.issueType,
       issue.priority || 'Medium',
+      issue.storyPoints?.toString() || '-',
       issue.labels?.join(', ') || '',
     ]);
   });

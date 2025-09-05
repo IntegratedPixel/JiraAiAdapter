@@ -227,7 +227,7 @@ export class ADFBuilder {
     }
 
     // Process inline formatting (code, bold, italic)
-    let processedLine = line;
+    const processedLine = line;
     let lastIndex = 0;
     
     // Process inline code first

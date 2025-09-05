@@ -45,14 +45,14 @@ export class ConfigManager {
   }
 
   private loadConfigs(): void {
-    // 1. Load global config (auth credentials)
+    // 1. Load global config (lowest priority)
     this.loadGlobalConfig();
     
-    // 2. Load project-specific config (from current directory)
-    this.loadProjectConfig();
+    // 2. Apply environment variables (override global, but can be overridden by project)
+    this.applyEnvironmentVariables();
     
-    // 3. Apply environment variable overrides
-    this.applyEnvironmentOverrides();
+    // 3. Load project-specific config (highest priority - overrides env vars and global)
+    this.loadProjectConfig();
     
     this.configLoaded = true;
   }
@@ -104,27 +104,38 @@ export class ConfigManager {
     }
   }
 
-  private applyEnvironmentOverrides(): void {
-    // Global settings from env
+  private applyEnvironmentVariables(): void {
+    // Global settings from env vars (override global config files)
     if (process.env.JIRA_HOST) {
       this.globalConfig.host = process.env.JIRA_HOST;
     }
     if (process.env.JIRA_EMAIL) {
       this.globalConfig.email = process.env.JIRA_EMAIL;
     }
-    if (process.env.JIRA_TOKEN) {
-      this.globalConfig.apiToken = process.env.JIRA_TOKEN;
+    if (process.env.JIRA_TOKEN || process.env.JIRA_API_TOKEN) {
+      // Accept both JIRA_TOKEN and JIRA_API_TOKEN for flexibility
+      this.globalConfig.apiToken = process.env.JIRA_TOKEN || process.env.JIRA_API_TOKEN;
     }
     
-    // Project settings from env
+    // Project settings from env vars (will be overridden by project config)
     if (process.env.JIRA_PROJECT) {
       this.projectConfig.project = process.env.JIRA_PROJECT;
     }
     if (process.env.JIRA_BOARD) {
       this.projectConfig.board = process.env.JIRA_BOARD;
     }
-    if (process.env.JIRA_DEFAULT_ISSUE_TYPE) {
-      this.projectConfig.defaultIssueType = process.env.JIRA_DEFAULT_ISSUE_TYPE;
+    if (process.env.JIRA_DEFAULT_ISSUE_TYPE || process.env.JIRA_DEFAULT_TYPE) {
+      this.projectConfig.defaultIssueType = process.env.JIRA_DEFAULT_ISSUE_TYPE || process.env.JIRA_DEFAULT_TYPE;
+    }
+    if (process.env.JIRA_DEFAULT_ASSIGNEE) {
+      this.projectConfig.defaultAssignee = process.env.JIRA_DEFAULT_ASSIGNEE;
+    }
+    if (process.env.JIRA_DEFAULT_PRIORITY) {
+      this.projectConfig.defaultPriority = process.env.JIRA_DEFAULT_PRIORITY;
+    }
+    if (process.env.JIRA_DEFAULT_LABELS) {
+      // Split comma-separated labels
+      this.projectConfig.defaultLabels = process.env.JIRA_DEFAULT_LABELS.split(',').map(l => l.trim());
     }
   }
 
@@ -152,7 +163,7 @@ export class ConfigManager {
     }
   }
 
-  async getConfig(): Promise<JiraFullConfig> {
+  async getConfig(overrides?: Partial<ProjectConfig>): Promise<JiraFullConfig> {
     await this.loadTokenFromKeychain();
     
     const config: JiraFullConfig = {
@@ -161,13 +172,13 @@ export class ConfigManager {
       email: this.globalConfig.email || '',
       apiToken: this.globalConfig.apiToken || '',
       
-      // Project settings
-      project: this.projectConfig.project || '',
-      board: this.projectConfig.board,
-      defaultIssueType: this.projectConfig.defaultIssueType || 'Task',
-      defaultAssignee: this.projectConfig.defaultAssignee,
-      defaultLabels: this.projectConfig.defaultLabels,
-      defaultPriority: this.projectConfig.defaultPriority,
+      // Project settings (with command-line overrides)
+      project: overrides?.project || this.projectConfig.project || '',
+      board: overrides?.board || this.projectConfig.board,
+      defaultIssueType: overrides?.defaultIssueType || this.projectConfig.defaultIssueType || 'Task',
+      defaultAssignee: overrides?.defaultAssignee || this.projectConfig.defaultAssignee,
+      defaultLabels: overrides?.defaultLabels || this.projectConfig.defaultLabels,
+      defaultPriority: overrides?.defaultPriority || this.projectConfig.defaultPriority,
     };
     
     return config;
@@ -301,6 +312,54 @@ export class ConfigManager {
 
   getCurrentProject(): string | undefined {
     return this.projectConfig.project;
+  }
+
+  /**
+   * Check if configuration is fully available from environment variables
+   * This helps determine if interactive setup can be skipped
+   */
+  isConfiguredViaEnvironment(): boolean {
+    return !!(
+      process.env.JIRA_HOST &&
+      process.env.JIRA_EMAIL &&
+      (process.env.JIRA_TOKEN || process.env.JIRA_API_TOKEN) &&
+      process.env.JIRA_PROJECT
+    );
+  }
+
+  /**
+   * Get configuration status and sources for debugging
+   */
+  getConfigStatus(): {
+    isComplete: boolean;
+    sources: {
+      host: 'env' | 'file' | 'missing';
+      email: 'env' | 'file' | 'missing';
+      apiToken: 'env' | 'keychain' | 'file' | 'missing';
+      project: 'env' | 'file' | 'missing';
+    };
+    envVarsDetected: string[];
+  } {
+    const envVarsDetected = [];
+    if (process.env.JIRA_HOST) envVarsDetected.push('JIRA_HOST');
+    if (process.env.JIRA_EMAIL) envVarsDetected.push('JIRA_EMAIL');
+    if (process.env.JIRA_TOKEN) envVarsDetected.push('JIRA_TOKEN');
+    if (process.env.JIRA_API_TOKEN) envVarsDetected.push('JIRA_API_TOKEN');
+    if (process.env.JIRA_PROJECT) envVarsDetected.push('JIRA_PROJECT');
+    if (process.env.JIRA_BOARD) envVarsDetected.push('JIRA_BOARD');
+    if (process.env.JIRA_DEFAULT_TYPE) envVarsDetected.push('JIRA_DEFAULT_TYPE');
+
+    return {
+      isComplete: this.validate().length === 0,
+      sources: {
+        host: process.env.JIRA_HOST ? 'env' : (this.globalConfig.host ? 'file' : 'missing'),
+        email: process.env.JIRA_EMAIL ? 'env' : (this.globalConfig.email ? 'file' : 'missing'),
+        apiToken: (process.env.JIRA_TOKEN || process.env.JIRA_API_TOKEN) ? 'env' : 
+                 this.globalConfig.apiToken ? 'keychain' : 'missing',
+        project: process.env.JIRA_PROJECT ? 'env' : (this.projectConfig.project ? 'file' : 'missing'),
+      },
+      envVarsDetected,
+    };
   }
 
   getConfigSource(): { global: string; project: string | null } {
