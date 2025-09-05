@@ -4,7 +4,7 @@ AI-friendly command-line interface for Jira, designed to enable AI assistants (C
 
 ## Features
 
-### Current Release (v0.4.0)
+### Current Release (v0.5.0)
 
 #### Foundation
 - ✅ Secure credential management with keychain support
@@ -16,9 +16,10 @@ AI-friendly command-line interface for Jira, designed to enable AI assistants (C
 
 #### Core Commands
 - ✅ **List issues** with powerful filtering (status, assignee, type, priority, labels, sprint)
-- ✅ **View issue details** with comments and history support
-- ✅ **Create issues** with interactive mode and templates (bug, feature, task)
-- ✅ **Update issues** with field modifications, status transitions, story points, and file-based descriptions
+- ✅ **View issue details** with comments, history, and Epic/Parent relationships
+- ✅ **Create issues** with interactive mode, templates, and Epic linking support
+- ✅ **Update issues** with field modifications, status transitions, story points, Epic linking, and file-based descriptions
+- ✅ **Epic Link support** - Link issues to Epics during creation or update with automatic field detection
 - ✅ **Delete issues** with confirmation prompts
 - ✅ **Comment on issues** with text, file, or editor input
 - ✅ **Transition issues** through workflows with smart status discovery
@@ -62,6 +63,7 @@ export JIRA_PROJECT=PROJ
 # Start using immediately - no setup needed!
 jira list --mine        # List your issues
 jira create --type Bug --summary "Fix login"
+jira create --type Story --summary "User dashboard" --epic PROJ-100  # Link to Epic
 jira comment PROJ-123 "Fixed the issue"  # Add comments
 jira view PROJ-123     # View issue details
 ```
@@ -294,6 +296,12 @@ jira create --type Task --summary "Update documentation" --description "Need to 
 # Create with story points
 jira create --type Story --summary "Add user dashboard" --story-points 8 --priority High
 
+# Create and link to Epic
+jira create --type Story --summary "User profile page" --epic PROJ-100
+
+# Create with Epic and story points
+jira create --type Task --summary "API integration" --epic PROJ-100 --story-points 5
+
 # Create in different project
 jira create --project MOBILE --type Bug --summary "iOS crash on login"
 
@@ -326,6 +334,12 @@ jira update PROJ-123 --status "Done" --comment "Task completed"
 jira update PROJ-123 --labels add:urgent,backend
 jira update PROJ-123 --labels remove:old-label
 jira update PROJ-123 --labels set:new-label,another-label
+
+# Link to Epic
+jira update PROJ-123 --epic PROJ-100
+
+# Remove from Epic
+jira update PROJ-123 --epic none
 
 # Convert to sub-task
 jira update PROJ-123 --parent PROJ-100 --type Sub-task
@@ -369,6 +383,37 @@ jira transition PROJ-123 --to "Done" --comment-file ./completion-notes.md
 # Multi-project transitions
 jira transition MOBILE-456 --project MOBILE --to "Testing"
 ```
+
+### Epic Link Management
+
+Epic Links create parent-child relationships between Epics and Stories/Tasks for Agile planning. The CLI automatically detects your Jira instance's Epic Link field configuration.
+
+```bash
+# Create issue linked to Epic
+jira create --type Story --summary "User authentication" --epic PROJ-100
+
+# Link existing issue to Epic
+jira update PROJ-123 --epic PROJ-100
+
+# Remove issue from Epic
+jira update PROJ-123 --epic none
+
+# View Epic relationships (shows Parent field)
+jira view PROJ-123
+# Output includes: Parent: PROJ-100 (Epic) - User Management Epic
+
+# Epic Links work across projects
+jira create --project MOBILE --type Story --summary "Mobile auth" --epic BACKEND-50
+```
+
+**Epic Link Features:**
+- ✅ **Smart field detection** - Works with both modern parent fields and legacy custom fields
+- ✅ **Automatic validation** - Verifies Epic exists before linking
+- ✅ **Cross-project support** - Link issues to Epics in different projects
+- ✅ **Clear error messages** - Helpful guidance when Epic Links aren't configured
+- ✅ **View integration** - See Epic relationships in issue details
+
+**Note:** If your project doesn't support Epic Links, the CLI will provide instructions on how to enable them or suggest using standard issue links instead.
 
 ### Batch Operations
 
