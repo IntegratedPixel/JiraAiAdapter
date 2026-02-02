@@ -13,6 +13,7 @@ import { createTypesCommand } from './commands/types.js';
 import { createCommentCommand } from './commands/comment.js';
 import { createTransitionCommand } from './commands/transition.js';
 import { createLinkCommand } from './commands/link.js';
+import { createSelftestCommand } from './commands/selftest.js';
 import { Logger } from './utils/logger.js';
 import { ErrorHandler } from './utils/error-handler.js';
 import { ConfigManager } from './config/jira.js';
@@ -29,7 +30,7 @@ export type { JiraConfig, GlobalConfig, ProjectConfig } from './config/jira.js';
 export type { JiraIssue, JiraUser, JiraComment } from './types/jira.js';
 
 // Version will be injected during build
-const VERSION = '0.4.1';
+const VERSION = '0.6.0';
 
 const program = new Command();
 
@@ -64,6 +65,7 @@ program.addCommand(createTransitionCommand());
 program.addCommand(createLinkCommand());
 program.addCommand(createBatchCommand());
 program.addCommand(createTypesCommand());
+program.addCommand(createSelftestCommand());
 
 // Add help command that shows configuration status
 program

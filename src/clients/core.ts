@@ -22,10 +22,10 @@ export interface JiraProject {
 
 export interface SearchOptions {
   jql?: string;
-  startAt?: number;
   maxResults?: number;
   fields?: string[];
   expand?: string[];
+  nextPageToken?: string;
 }
 
 export interface CreateIssueOptions {
@@ -75,33 +75,37 @@ export class CoreClient extends BaseClient {
    */
   async searchIssues(options: SearchOptions = {}): Promise<JiraSearchResult> {
     const params = new URLSearchParams();
-    
+
     // Build JQL query
     let jql = options.jql || '';
     if (!jql) {
       // Default to current project
       jql = `project = ${this.config.project} ORDER BY updated DESC`;
     }
-    
+
     params.append('jql', jql);
-    
-    if (options.startAt !== undefined) {
-      params.append('startAt', options.startAt.toString());
-    }
-    
+
     if (options.maxResults !== undefined) {
       params.append('maxResults', options.maxResults.toString());
     }
-    
+
+    // The new /search/jql endpoint defaults to returning only issue IDs.
+    // Request *navigable to match the old /search endpoint behavior.
     if (options.fields && options.fields.length > 0) {
       params.append('fields', options.fields.join(','));
+    } else {
+      params.append('fields', '*navigable');
     }
-    
+
     if (options.expand && options.expand.length > 0) {
       params.append('expand', options.expand.join(','));
     }
 
-    return this.request<JiraSearchResult>(`rest/api/3/search?${params.toString()}`);
+    if (options.nextPageToken) {
+      params.append('nextPageToken', options.nextPageToken);
+    }
+
+    return this.request<JiraSearchResult>(`rest/api/3/search/jql?${params.toString()}`);
   }
 
   /**

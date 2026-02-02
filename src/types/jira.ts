@@ -97,11 +97,10 @@ export interface JiraComment {
 }
 
 export interface JiraSearchResult {
-  expand: string;
-  startAt: number;
-  maxResults: number;
   total: number;
   issues: JiraIssue[];
+  nextPageToken?: string;
+  maxResults?: number;
 }
 
 export interface JiraTransition {

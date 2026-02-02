@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-02-01
+
+### Added
+- **Selftest Command** - End-to-end connectivity and CRUD verification
+  - `jira selftest` runs a 5-step test: connect, create, search, update, delete
+  - Creates a temporary `[SELFTEST]` issue and cleans it up automatically
+  - Supports `--json` for structured output and `--yes` to skip confirmation
+  - Exits with code 1 on any failure for CI/CD integration
+
+### Changed
+- **Search API Migration** - Migrated from deprecated `/rest/api/3/search` to `/rest/api/3/search/jql`
+  - Replaced offset-based pagination (`startAt`/`--page`) with token-based pagination (`nextPageToken`/`--next-page-token`)
+  - Default fields now request `*navigable` to match previous behavior
+- **JiraSearchResult type** - Updated to reflect new API response shape (`nextPageToken` replaces `startAt`/`expand`)
+
+## [0.5.0] - 2025-01-XX
+
+### Added
+- **Epic Link Support** - Link issues to Epics with `--epic` flag
+  - Auto-detection of Epic Link field (standard `parent` or custom fields)
+  - Works across both team-managed and company-managed projects
+- **Enhanced Help Text** - Improved command descriptions and examples
+
 ## [0.4.0] - 2025-01-XX
 
 ### Added
@@ -72,4 +95,5 @@ This changelog tracks the evolution of the Jira AI CLI from a basic tool to an e
 Key milestones:
 - **v0.3.x**: Core Jira operations established
 - **v0.4.0**: Enterprise features, environment variables, transitions, comments, multi-project support
-- **Future**: Sprint management, advanced AI features, performance optimizations
+- **v0.5.0**: Epic Link support and enhanced help text
+- **v0.6.0**: Selftest command, search API migration to `/search/jql` with token-based pagination

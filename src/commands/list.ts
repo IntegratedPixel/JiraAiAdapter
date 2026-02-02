@@ -18,7 +18,7 @@ export function createListCommand(): Command {
     .option('--board <name>', 'Specify board name (overrides default board)')
     .option('--sprint <sprint>', 'Filter by sprint (current, next, or sprint name)')
     .option('--limit <number>', 'Maximum number of issues to return', '20')
-    .option('--page <number>', 'Page number (for pagination)', '0')
+    .option('--next-page-token <token>', 'Pagination token from a previous result')
     .option('--jql <query>', 'Custom JQL query')
     .option('--fields <fields>', 'Comma-separated list of fields to return')
     .option('--mine', 'Show only issues assigned to me')
@@ -106,35 +106,31 @@ export function createListCommand(): Command {
 
         const searchOptions = {
           jql,
-          startAt: parseInt(options.page) * parseInt(options.limit),
           maxResults: parseInt(options.limit),
           fields: options.fields ? options.fields.split(',') : undefined,
+          nextPageToken: options.nextPageToken,
         };
 
         const result = await client.searchIssues(searchOptions);
-        
+
         Logger.stopSpinner(true);
 
         if (Logger.isJsonMode()) {
           ErrorHandler.success({
             total: result.total,
-            startAt: result.startAt,
-            maxResults: result.maxResults,
             issues: Formatter.formatJson(result.issues),
+            nextPageToken: result.nextPageToken || null,
           });
         } else {
           if (result.issues.length === 0) {
             Logger.info('No issues found matching your criteria');
           } else {
             console.log(Formatter.formatIssuesTable(result.issues));
-            
-            const totalPages = Math.ceil(result.total / result.maxResults);
-            const currentPage = Math.floor(result.startAt / result.maxResults) + 1;
-            
-            Logger.info(`\nShowing ${result.issues.length} of ${result.total} issues (Page ${currentPage}/${totalPages})`);
-            
-            if (result.total > result.startAt + result.maxResults) {
-              Logger.info(`Use --page ${currentPage} to see the next page`);
+
+            Logger.info(`\nShowing ${result.issues.length} of ${result.total} issues`);
+
+            if (result.nextPageToken) {
+              Logger.info(`More results available. Use --next-page-token ${result.nextPageToken} to see the next page`);
             }
           }
         }

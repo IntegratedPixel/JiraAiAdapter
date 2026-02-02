@@ -4,7 +4,7 @@ AI-friendly command-line interface for Jira, designed to enable AI assistants (C
 
 ## Features
 
-### Current Release (v0.5.0)
+### Current Release (v0.6.0)
 
 #### Foundation
 - ✅ Secure credential management with keychain support

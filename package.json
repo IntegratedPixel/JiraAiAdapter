@@ -1,6 +1,6 @@
 {
   "name": "@integratedpixel/jira-ai-cli",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "AI-friendly Jira CLI tool for command-line interaction with Jira",
   "main": "dist/index.js",
   "type": "module",
