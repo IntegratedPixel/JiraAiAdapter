@@ -30,7 +30,7 @@ export type { JiraConfig, GlobalConfig, ProjectConfig } from './config/jira.js';
 export type { JiraIssue, JiraUser, JiraComment } from './types/jira.js';
 
 // Version will be injected during build
-const VERSION = '0.6.0';
+const VERSION = '0.6.1';
 
 const program = new Command();
 
