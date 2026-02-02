@@ -40,14 +40,13 @@ AI-friendly command-line interface for Jira, designed to enable AI assistants (C
 ## Installation
 
 ```bash
-# Install dependencies
-npm install
+npm install -g @integratedpixel/jira-ai-cli
+```
 
-# Build the project
-npm run build
+This installs the `jira` command globally. Verify it works:
 
-# Link for global usage (optional)
-npm link
+```bash
+jira --version
 ```
 
 ## Quick Start
@@ -540,8 +539,17 @@ jira --json status
 ## Development
 
 ```bash
+# Clone and install
+git clone https://github.com/IntegratedPixel/JiraAiAdapter.git
+cd JiraAiAdapter
+npm install
+
 # Run in development mode
 npm run dev
+
+# Build and link locally
+npm run build
+npm link
 
 # Run linter
 npm run lint
@@ -551,9 +559,6 @@ npm run format
 
 # Run tests
 npm run test
-
-# Build for production
-npm run build
 ```
 
 ## Security
