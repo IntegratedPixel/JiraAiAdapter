@@ -5,6 +5,7 @@ import { Logger } from '../utils/logger.js';
 import { ErrorHandler } from '../utils/error-handler.js';
 import { Formatter } from '../utils/formatter.js';
 import { JQLSanitizer } from '../utils/jql-sanitizer.js';
+import { DEFAULTS } from '../constants.js';
 
 export function createListCommand(): Command {
   const list = new Command('list')
@@ -17,7 +18,7 @@ export function createListCommand(): Command {
     .option('--project <key>', 'Filter by project (overrides default project)')
     .option('--board <name>', 'Specify board name (overrides default board)')
     .option('--sprint <sprint>', 'Filter by sprint (current, next, or sprint name)')
-    .option('--limit <number>', 'Maximum number of issues to return', '20')
+    .option('--limit <number>', 'Maximum number of issues to return', String(DEFAULTS.LIST_LIMIT))
     .option('--next-page-token <token>', 'Pagination token from a previous result')
     .option('--jql <query>', 'Custom JQL query')
     .option('--fields <fields>', 'Comma-separated list of fields to return')

@@ -20,6 +20,9 @@ export class BaseClient {
       username: config.email,
       password: config.apiToken,
       responseType: 'json',
+      timeout: {
+        request: 30_000,
+      },
       retry: {
         limit: 3,
         methods: ['GET', 'PUT', 'DELETE'],
@@ -64,15 +67,11 @@ export class BaseClient {
   }
 
   protected async request<T = any>(path: string, options?: any): Promise<T> {
-    try {
-      const response = await this.client(path, {
-        ...options,
-        responseType: 'json',
-        resolveBodyOnly: true,
-      });
-      return response as T;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client(path, {
+      ...options,
+      responseType: 'json',
+      resolveBodyOnly: true,
+    });
+    return response as T;
   }
 }

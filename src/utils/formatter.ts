@@ -2,6 +2,7 @@ import Table from 'cli-table3';
 import chalk from 'chalk';
 import { JiraIssue } from '../types/jira.js';
 import { ADFBuilder } from './adf.js';
+import { STORY_POINT_FIELDS } from '../constants.js';
 
 export class Formatter {
   /**
@@ -244,21 +245,7 @@ export class Formatter {
    * Get story points from issue fields
    */
   private static getStoryPoints(fields: any): number | null {
-    // Story points can be in various custom fields, commonly:
-    // - customfield_10016 (common default)
-    // - customfield_10002 
-    // - story_point_estimate
-    // We'll check common ones and return the first found
-    const storyPointFields = [
-      'customfield_10016',
-      'customfield_10002', 
-      'customfield_10004',
-      'customfield_10008',
-      'story_point_estimate',
-      'storyPoints'
-    ];
-
-    for (const field of storyPointFields) {
+    for (const field of STORY_POINT_FIELDS) {
       if (fields[field] !== undefined && fields[field] !== null) {
         const value = parseFloat(fields[field]);
         if (!isNaN(value)) {

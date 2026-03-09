@@ -15,8 +15,9 @@ import { createTransitionCommand } from './commands/transition.js';
 import { createLinkCommand } from './commands/link.js';
 import { createSelftestCommand } from './commands/selftest.js';
 import { Logger } from './utils/logger.js';
-import { ErrorHandler } from './utils/error-handler.js';
+import { ErrorHandler, EXIT_CODES } from './utils/error-handler.js';
 import { ConfigManager } from './config/jira.js';
+import { createRequire } from 'module';
 
 // Export for programmatic usage
 export { CoreClient } from './clients/core.js';
@@ -29,8 +30,8 @@ export type { ParsedIssue } from './utils/markdown-parser.js';
 export type { JiraConfig, GlobalConfig, ProjectConfig } from './config/jira.js';
 export type { JiraIssue, JiraUser, JiraComment } from './types/jira.js';
 
-// Version will be injected during build
-const VERSION = '0.6.1';
+const require = createRequire(import.meta.url);
+const { version: VERSION } = require('../package.json') as { version: string };
 
 const program = new Command();
 
@@ -135,7 +136,7 @@ program
 program.on('command:*', () => {
   Logger.error(`Invalid command: ${program.args.join(' ')}`);
   Logger.info('Run "jira --help" for a list of available commands');
-  process.exit(1);
+  process.exit(EXIT_CODES.UNKNOWN_ERROR);
 });
 
 // Parse arguments

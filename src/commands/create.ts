@@ -7,6 +7,7 @@ import { ConfigManager } from '../config/jira.js';
 import { CoreClient } from '../clients/core.js';
 import { Logger } from '../utils/logger.js';
 import { ErrorHandler } from '../utils/error-handler.js';
+import { ISSUE_TYPE_CHOICES, PRIORITY_CHOICES, DEFAULTS } from '../constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -177,7 +178,7 @@ export function createCreateCommand(): Command {
               type: 'list',
               name: 'issueType',
               message: 'Issue type:',
-              choices: ['Bug', 'Story', 'Task', 'Epic', 'Sub-task'],
+              choices: [...ISSUE_TYPE_CHOICES],
               when: !issueData.issueType,
             },
             {
@@ -190,8 +191,8 @@ export function createCreateCommand(): Command {
               type: 'list',
               name: 'priority',
               message: 'Priority:',
-              choices: ['Highest', 'High', 'Medium', 'Low', 'Lowest'],
-              default: 'Medium',
+              choices: [...PRIORITY_CHOICES],
+              default: DEFAULTS.PRIORITY,
               when: !issueData.priority,
             },
           ]);
@@ -200,7 +201,7 @@ export function createCreateCommand(): Command {
         }
 
         // Set defaults
-        if (!issueData.priority) issueData.priority = 'Medium';
+        if (!issueData.priority) issueData.priority = DEFAULTS.PRIORITY;
         if (!issueData.description) issueData.description = '';
 
         // Dry run - just show what would be created

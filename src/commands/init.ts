@@ -2,8 +2,9 @@ import { Command } from 'commander';
 import inquirer from 'inquirer';
 import { ConfigManager, ProjectConfig } from '../config/config-manager.js';
 import { Logger } from '../utils/logger.js';
-import { ErrorHandler } from '../utils/error-handler.js';
+import { ErrorHandler, EXIT_CODES } from '../utils/error-handler.js';
 import { CoreClient } from '../clients/core.js';
+import { ISSUE_TYPE_CHOICES, PRIORITY_CHOICES, DEFAULTS } from '../constants.js';
 
 export function createInitCommand(): Command {
   const init = new Command('init')
@@ -12,8 +13,8 @@ export function createInitCommand(): Command {
     .option('-b, --board <name>', 'Board name or ID')
     .option('--assignee <user>', 'Default assignee (email or "me")')
     .option('--labels <labels>', 'Default labels (comma-separated)')
-    .option('--type <type>', 'Default issue type', 'Task')
-    .option('--priority <priority>', 'Default priority', 'Medium')
+    .option('--type <type>', 'Default issue type', DEFAULTS.ISSUE_TYPE)
+    .option('--priority <priority>', 'Default priority', DEFAULTS.PRIORITY)
     .option('--non-interactive', 'Skip interactive prompts')
     .action(async (options) => {
       try {
@@ -27,7 +28,7 @@ export function createInitCommand(): Command {
         if (globalErrors.length > 0) {
           Logger.error('Global authentication not configured. Run "jira auth set" first.');
           globalErrors.forEach(err => Logger.error(`  • ${err}`));
-          process.exit(3);
+          process.exit(EXIT_CODES.AUTH_ERROR);
         }
 
         let projectConfig: ProjectConfig;
@@ -92,8 +93,8 @@ export function createInitCommand(): Command {
               type: 'list',
               name: 'defaultIssueType',
               message: 'Default issue type:',
-              choices: ['Task', 'Bug', 'Story', 'Epic', 'Sub-task'],
-              default: currentConfig.defaultIssueType || options.type || 'Task',
+              choices: [...ISSUE_TYPE_CHOICES],
+              default: currentConfig.defaultIssueType || options.type || DEFAULTS.ISSUE_TYPE,
             },
             {
               type: 'input',
@@ -111,8 +112,8 @@ export function createInitCommand(): Command {
               type: 'list',
               name: 'defaultPriority',
               message: 'Default priority:',
-              choices: ['Highest', 'High', 'Medium', 'Low', 'Lowest'],
-              default: currentConfig.defaultPriority || options.priority || 'Medium',
+              choices: [...PRIORITY_CHOICES],
+              default: currentConfig.defaultPriority || options.priority || DEFAULTS.PRIORITY,
             },
           ];
 

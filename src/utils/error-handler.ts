@@ -51,7 +51,11 @@ export class ErrorHandler {
       const status = error.response.statusCode || error.response.status;
       const body = error.response.body || error.response.data;
 
-      if (status === 401 || status === 403) {
+      if (status === 400) {
+        code = ErrorCode.INVALID_ARGS;
+        exitCode = EXIT_CODES.INVALID_ARGS;
+        message = 'Bad request. Check your input parameters.';
+      } else if (status === 401 || status === 403) {
         code = ErrorCode.AUTH;
         exitCode = EXIT_CODES.AUTH_ERROR;
         message = 'Authentication failed. Please check your credentials.';
@@ -66,13 +70,17 @@ export class ErrorHandler {
         if (error.response.headers?.['retry-after']) {
           details.retryAfter = error.response.headers['retry-after'];
         }
-      } else {
+      } else if (status >= 500) {
         code = ErrorCode.NETWORK;
         exitCode = EXIT_CODES.NETWORK_ERROR;
+        message = `Jira server error (HTTP ${status}). Please try again later.`;
+      } else {
+        code = ErrorCode.UNKNOWN;
+        exitCode = EXIT_CODES.UNKNOWN_ERROR;
         message = `HTTP ${status} error`;
       }
 
-      if (body?.errorMessages) {
+      if (body?.errorMessages?.length) {
         message = body.errorMessages.join(', ');
       } else if (body?.message) {
         message = body.message;
@@ -82,7 +90,7 @@ export class ErrorHandler {
       if (body) {
         details.response = body;
       }
-    } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+    } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET') {
       code = ErrorCode.NETWORK;
       exitCode = EXIT_CODES.NETWORK_ERROR;
       message = 'Network error. Please check your connection and JIRA_HOST configuration.';
@@ -95,7 +103,7 @@ export class ErrorHandler {
       message = error.message || message;
     }
 
-    if (Logger['jsonMode']) {
+    if (Logger.isJsonMode()) {
       const response: JsonError = {
         ok: false,
         data: null,
@@ -114,7 +122,7 @@ export class ErrorHandler {
   }
 
   static success<T>(data: T): void {
-    if (Logger['jsonMode']) {
+    if (Logger.isJsonMode()) {
       const response: JsonSuccess<T> = {
         ok: true,
         data,

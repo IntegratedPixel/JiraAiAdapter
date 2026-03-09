@@ -11,6 +11,7 @@ import {
   JiraUser,
 } from '../types/jira.js';
 import { ADFBuilder } from '../utils/adf.js';
+import { STORY_POINT_FIELDS, EPIC_LINK_FIELDS } from '../constants.js';
 
 
 export interface JiraProject {
@@ -149,11 +150,9 @@ export class CoreClient extends BaseClient {
       createData.fields.priority = { name: options.priority };
     }
 
-    // Add story points if provided
+    // Add story points if provided (uses first known field; retried on error)
     if (options.storyPoints !== undefined) {
-      // For creation, we'll try the common field first
-      // Note: This might need adjustment based on the specific Jira instance
-      createData.fields.customfield_10016 = options.storyPoints;
+      createData.fields[STORY_POINT_FIELDS[0]] = options.storyPoints;
     }
 
     if (options.labels && options.labels.length > 0) {
@@ -223,16 +222,21 @@ export class CoreClient extends BaseClient {
             retryNeeded = true;
           }
           
-          // Story points field error - try different common fields
-          if (body.errors.customfield_10016 && options.storyPoints !== undefined) {
-            Logger.warning('Story points field customfield_10016 not available, trying customfield_10002');
-            delete createData.fields.customfield_10016;
-            createData.fields.customfield_10002 = options.storyPoints;
-            retryNeeded = true;
-          } else if (body.errors.customfield_10002 && options.storyPoints !== undefined) {
-            Logger.warning('Story points field customfield_10002 not available, removing story points');
-            delete createData.fields.customfield_10002;
-            retryNeeded = true;
+          // Story points field error - try next known field
+          if (options.storyPoints !== undefined) {
+            const failedSPField = STORY_POINT_FIELDS.find(f => body.errors[f]);
+            if (failedSPField) {
+              delete createData.fields[failedSPField];
+              const nextIdx = STORY_POINT_FIELDS.indexOf(failedSPField) + 1;
+              if (nextIdx < STORY_POINT_FIELDS.length) {
+                const nextField = STORY_POINT_FIELDS[nextIdx];
+                Logger.warning(`Story points field ${failedSPField} not available, trying ${nextField}`);
+                createData.fields[nextField] = options.storyPoints;
+              } else {
+                Logger.warning(`Story points field ${failedSPField} not available, removing story points`);
+              }
+              retryNeeded = true;
+            }
           }
           
           // Issue type error
@@ -253,16 +257,15 @@ export class CoreClient extends BaseClient {
           }
           
           // Epic Link field errors - try different Epic Link fields
-          const epicLinkFields = ['customfield_10014', 'customfield_10013', 'customfield_10015', 'customfield_10009'];
           let epicLinkErrorFound = false;
-          for (const field of epicLinkFields) {
+          for (const field of EPIC_LINK_FIELDS) {
             if (body.errors[field] && options.epic !== undefined) {
               if (!epicLinkErrorFound) {
                 Logger.warning(`Epic Link field ${field} not available, trying alternative fields`);
                 delete createData.fields[field];
                 
                 // Try next common Epic Link field
-                const nextField = epicLinkFields[epicLinkFields.indexOf(field) + 1];
+                const nextField = EPIC_LINK_FIELDS[EPIC_LINK_FIELDS.indexOf(field) + 1];
                 if (nextField) {
                   createData.fields[nextField] = options.epic;
                   retryNeeded = true;
@@ -270,14 +273,14 @@ export class CoreClient extends BaseClient {
                 } else {
                   Logger.warning('No Epic Link field found, removing Epic Link');
                   // Remove all potential Epic Link fields
-                  epicLinkFields.forEach(f => delete createData.fields[f]);
+                  EPIC_LINK_FIELDS.forEach(f => delete createData.fields[f]);
                 }
               }
             }
           }
           
           // Collect other field errors
-          const ignoredFields = ['priority', 'customfield_10016', 'customfield_10002', 'components', ...epicLinkFields];
+          const ignoredFields = ['priority', ...STORY_POINT_FIELDS, 'components', ...EPIC_LINK_FIELDS];
           Object.keys(body.errors).forEach(field => {
             if (!ignoredFields.includes(field)) {
               fieldErrors.push(`${field}: ${body.errors[field]}`);
@@ -727,18 +730,8 @@ export class CoreClient extends BaseClient {
       // Get the issue to examine its fields
       const issue = await this.getIssue(issueKey);
       
-      // Common story points field names
-      const storyPointFields = [
-        'customfield_10016',
-        'customfield_10002',
-        'customfield_10004', 
-        'customfield_10008',
-        'story_point_estimate',
-        'storyPoints'
-      ];
-
       // Check which field exists and has numeric content
-      for (const field of storyPointFields) {
+      for (const field of STORY_POINT_FIELDS) {
         if (issue.fields[field] !== undefined) {
           return field;
         }

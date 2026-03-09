@@ -2,12 +2,9 @@ import { Command } from 'commander';
 import { ConfigManager } from '../config/jira.js';
 import { CoreClient } from '../clients/core.js';
 import { Logger } from '../utils/logger.js';
-import { ErrorHandler } from '../utils/error-handler.js';
+import { ErrorHandler, EXIT_CODES } from '../utils/error-handler.js';
 import { Formatter } from '../utils/formatter.js';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
+import { spawn } from 'child_process';
 
 export function createViewCommand(): Command {
   const view = new Command('view')
@@ -59,7 +56,7 @@ export function createViewCommand(): Command {
               Logger.info('- The issue might have been deleted');
               Logger.info('- You might not have permission to view issues in this project');
               Logger.info(`\nYou can try visiting the URL directly: ${url}`);
-              process.exit(4);
+              process.exit(EXIT_CODES.NOT_FOUND);
             }
           }
           throw error;
@@ -74,9 +71,15 @@ export function createViewCommand(): Command {
           
           try {
             const platform = process.platform;
-            const command = platform === 'darwin' ? 'open' : 
+            const command = platform === 'darwin' ? 'open' :
                           platform === 'win32' ? 'start' : 'xdg-open';
-            await execAsync(`${command} "${url}"`);
+            const args = platform === 'win32' ? ['', url] : [url];
+            await new Promise<void>((resolve, reject) => {
+              const child = spawn(command, args, { stdio: 'ignore', detached: true });
+              child.on('error', reject);
+              child.unref();
+              resolve();
+            });
           } catch (error) {
             Logger.warning('Could not open browser automatically');
             Logger.info(`URL: ${url}`);

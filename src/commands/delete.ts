@@ -3,7 +3,7 @@ import inquirer from 'inquirer';
 import { ConfigManager } from '../config/config-manager.js';
 import { CoreClient } from '../clients/core.js';
 import { Logger } from '../utils/logger.js';
-import { ErrorHandler } from '../utils/error-handler.js';
+import { ErrorHandler, EXIT_CODES } from '../utils/error-handler.js';
 
 export function createDeleteCommand(): Command {
   const deleteCmd = new Command('delete')
@@ -30,7 +30,7 @@ export function createDeleteCommand(): Command {
           issue = await client.getIssue(issueKey);
         } catch (error) {
           Logger.error(`Issue ${issueKey} not found or not accessible`);
-          process.exit(4);
+          process.exit(EXIT_CODES.NOT_FOUND);
         }
 
         // Confirm deletion unless --force or --yes is used

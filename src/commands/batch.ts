@@ -8,6 +8,7 @@ import { ErrorHandler } from '../utils/error-handler.js';
 import { MarkdownParser, ParsedIssue } from '../utils/markdown-parser.js';
 import { CSVParser } from '../utils/csv-parser.js';
 import Table from 'cli-table3';
+import { ISSUE_TYPE_CHOICES, PRIORITY_CHOICES, DEFAULTS } from '../constants.js';
 
 export function createBatchCommand(): Command {
   const batch = new Command('batch')
@@ -20,7 +21,7 @@ export function createBatchCommand(): Command {
     .option('--dry-run', 'Preview issues without creating them')
     .option('--interactive', 'Review and modify each issue before creation')
     .option('--output <file>', 'Save results to file')
-    .option('--type <type>', 'Default issue type', 'Task')
+    .option('--type <type>', 'Default issue type', DEFAULTS.ISSUE_TYPE)
     .option('--labels <labels>', 'Additional labels (comma-separated)')
     .option('--assignee <user>', 'Default assignee')
     .option('--project <key>', 'Create in specific project (overrides default)')
@@ -40,13 +41,14 @@ export function createBatchCommand(): Command {
         // Parse input file
         let issues: ParsedIssue[];
         
-        if (file.endsWith('.md') || file.endsWith('.markdown')) {
+        const fileLower = file.toLowerCase();
+        if (fileLower.endsWith('.md') || fileLower.endsWith('.markdown')) {
           Logger.info('Parsing markdown file...');
           issues = MarkdownParser.parseFile(file);
-        } else if (file.endsWith('.csv')) {
+        } else if (fileLower.endsWith('.csv')) {
           Logger.info('Parsing CSV file...');
           issues = CSVParser.parseFile(file);
-        } else if (file.endsWith('.json')) {
+        } else if (fileLower.endsWith('.json')) {
           Logger.info('Loading JSON file...');
           const content = readFileSync(file, 'utf-8');
           issues = JSON.parse(content);
@@ -273,15 +275,15 @@ async function editIssue(issue: ParsedIssue): Promise<ParsedIssue> {
       type: 'list',
       name: 'issueType',
       message: 'Issue Type:',
-      choices: ['Task', 'Bug', 'Story', 'Epic', 'Subtask'],
+      choices: [...ISSUE_TYPE_CHOICES],
       default: issue.issueType,
     },
     {
       type: 'list',
       name: 'priority',
       message: 'Priority:',
-      choices: ['Highest', 'High', 'Medium', 'Low', 'Lowest'],
-      default: issue.priority || 'Medium',
+      choices: [...PRIORITY_CHOICES],
+      default: issue.priority || DEFAULTS.PRIORITY,
     },
     {
       type: 'input',

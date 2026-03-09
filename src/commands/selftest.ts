@@ -3,7 +3,7 @@ import inquirer from 'inquirer';
 import { ConfigManager } from '../config/config-manager.js';
 import { CoreClient } from '../clients/core.js';
 import { Logger } from '../utils/logger.js';
-import { ErrorHandler } from '../utils/error-handler.js';
+import { ErrorHandler, EXIT_CODES } from '../utils/error-handler.js';
 
 interface StepResult {
   step: number;
@@ -71,7 +71,7 @@ export function createSelftestCommand(): Command {
           results.push({ step: 1, name: 'testConnection', passed: false, detail: 'Connection failed', error: err.message });
           // Fatal — skip remaining steps
           printSummary(results, config);
-          process.exit(1);
+          process.exit(EXIT_CODES.UNKNOWN_ERROR);
         }
 
         // Step 2: Create issue
@@ -90,7 +90,7 @@ export function createSelftestCommand(): Command {
           results.push({ step: 2, name: 'createIssue', passed: false, detail: 'Create issue failed', error: err.message });
           // Fatal — skip remaining steps
           printSummary(results, config);
-          process.exit(1);
+          process.exit(EXIT_CODES.UNKNOWN_ERROR);
         }
 
         try {
@@ -151,7 +151,7 @@ export function createSelftestCommand(): Command {
 
         const allPassed = results.every(r => r.passed);
         if (!allPassed) {
-          process.exit(1);
+          process.exit(EXIT_CODES.UNKNOWN_ERROR);
         }
       } catch (error) {
         // Clean up if we created an issue but hit an unexpected error

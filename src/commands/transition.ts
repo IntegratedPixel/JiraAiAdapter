@@ -3,7 +3,7 @@ import { readFileSync, existsSync } from 'fs';
 import { ConfigManager } from '../config/jira.js';
 import { CoreClient } from '../clients/core.js';
 import { Logger } from '../utils/logger.js';
-import { ErrorHandler } from '../utils/error-handler.js';
+import { ErrorHandler, EXIT_CODES } from '../utils/error-handler.js';
 import { JiraTransition } from '../types/jira.js';
 import Table from 'cli-table3';
 
@@ -71,7 +71,7 @@ export function createTransitionCommand(): Command {
             Logger.error(`No transition available to status "${options.to}"`);
             Logger.info('\nAvailable transitions:');
             displayTransitions(transitions, currentStatus);
-            process.exit(1);
+            process.exit(EXIT_CODES.NOT_FOUND);
           }
         } else if (transitionName) {
           // Find transition by name
@@ -82,7 +82,7 @@ export function createTransitionCommand(): Command {
             Logger.error(`Transition "${transitionName}" not found`);
             Logger.info('\nAvailable transitions:');
             displayTransitions(transitions, currentStatus);
-            process.exit(1);
+            process.exit(EXIT_CODES.NOT_FOUND);
           }
         }
 

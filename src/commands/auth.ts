@@ -3,7 +3,7 @@ import inquirer from 'inquirer';
 import { ConfigManager, GlobalConfig } from '../config/config-manager.js';
 import { CoreClient } from '../clients/core.js';
 import { Logger } from '../utils/logger.js';
-import { ErrorHandler } from '../utils/error-handler.js';
+import { ErrorHandler, EXIT_CODES } from '../utils/error-handler.js';
 
 export function createAuthCommand(): Command {
   const auth = new Command('auth')
@@ -86,7 +86,7 @@ export function createAuthCommand(): Command {
           Logger.error('Global authentication not configured:');
           globalErrors.forEach(err => Logger.error(`  • ${err}`));
           Logger.info('\nRun "jira auth set" to configure');
-          process.exit(3);
+          process.exit(EXIT_CODES.AUTH_ERROR);
         }
 
         const config = await configManager.getConfig();
